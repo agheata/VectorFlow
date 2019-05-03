@@ -1,0 +1,26 @@
+@PACKAGE_INIT@
+
+set_and_check(VectorFlow_INCLUDE_DIR "@PACKAGE_VectorFlow_INSTALL_INCLUDEDIR@")
+set(VecMath_FOUND True)
+
+
+#include(CMakeFindDependencyMacro)
+#find_dependency(VectorFlow @VecCore_VERSION@ REQUIRED COMPONENTS ${VectorFlow_FIND_COMPONENTS})
+find_package(VecCore @VecCore_VERSION@ REQUIRED COMPONENTS ${VectorFlow_FIND_COMPONENTS})
+
+if(VecCore_FOUND)
+foreach(backend ${VecMath_FIND_COMPONENTS})
+  set(VecMath_${backend}_FOUND VecMath_${backend}_FOUND)
+endforeach()
+endif()
+
+check_required_components(VectorFlow)
+
+include(${CMAKE_CURRENT_LIST_DIR}/VectorFlowTargets.cmake)
+
+#for old cmake support
+if(VectorFlow_FOUND)
+  set(VectorFlow_INCLUDE_DIRS ${VectorFlow_INCLUDE_DIR} ${VecCore_INCLUDE_DIRS})
+  set(VectorFlow_DEFINITIONS ${VecCore_DEFINITIONS})
+  set(VectorFlow_LIBRARIES ${VecCore_LIBRARIES})
+endif()
