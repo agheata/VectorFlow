@@ -1,12 +1,13 @@
 @PACKAGE_INIT@
 
 set_and_check(VectorFlow_INCLUDE_DIR "@PACKAGE_VectorFlow_INSTALL_INCLUDEDIR@")
-set(VecMath_FOUND True)
+set(VectorFlow_FOUND True)
 
 
 #include(CMakeFindDependencyMacro)
-#find_dependency(VectorFlow @VecCore_VERSION@ REQUIRED COMPONENTS ${VectorFlow_FIND_COMPONENTS})
-find_package(VecCore @VecCore_VERSION@ REQUIRED COMPONENTS ${VectorFlow_FIND_COMPONENTS})
+find_dependency(VecCore @VecCore_VERSION@ REQUIRED COMPONENTS ${VectorFlow_FIND_COMPONENTS})
+#find_package(VecCore @VecCore_VERSION@ REQUIRED COMPONENTS ${VectorFlow_FIND_COMPONENTS})
+find_dependency(VecMath @VecMath_VERSION@ REQUIRED COMPONENTS ${VectorFlow_FIND_COMPONENTS}))
 
 if(VecCore_FOUND)
 foreach(backend ${VecMath_FIND_COMPONENTS})
