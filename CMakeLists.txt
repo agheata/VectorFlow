@@ -4,7 +4,7 @@ include(cmake/RecordCmdLine.cmake)
 
 option(BUILD_TESTING    "Build test binaries and create test target"  ON)
 option(BUILD_BENCHMARKS "Build binaries for performance benchmarking" OFF)
-set(VecCore_VERSION 0.4.2)
+set(VecCore_VERSION 0.5.0)
 
 if(BUILD_TESTING)
   message("Vc backend selected for testing")
@@ -28,17 +28,13 @@ add_definitions(${VecMath_DEFINITIONS})
 
 # Find VecGeom geometry headers library
 find_package(VecGeom REQUIRED)
-if( VECGEOM_FOUND )
-   message(STATUS "VecGeom libraries ${VECGEOM_LIBRARIES}")
-   #---ensure that VectorFlow is compiled with same architecture flags as VecGeom
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${VECGEOM_CXX_FLAGS}")
-   include_directories(${VECGEOM_INCLUDE_DIRS})
-   set ( VECGEOM_ROOT OFF )
-   if ( VECGEOM_DEFINITIONS MATCHES VECGEOM_ROOT )
-     set ( VECGEOM_ROOT ON )
-   endif()
-else()
-   message(FATAL_ERROR "Required VecGeom library not found")
+message(STATUS "VecGeom libraries ${VECGEOM_LIBRARIES}")
+#---ensure that VectorFlow is compiled with same architecture flags as VecGeom
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${VECGEOM_CXX_FLAGS}")
+include_directories(${VECGEOM_INCLUDE_DIRS})
+set ( VECGEOM_ROOT OFF )
+if ( VECGEOM_DEFINITIONS MATCHES VECGEOM_ROOT )
+  set ( VECGEOM_ROOT ON )
 endif()
 
 #installation configuration
@@ -75,6 +71,23 @@ ${CMAKE_CURRENT_BINARY_DIR}/VectorFlowConfig.cmake
 ${CMAKE_CURRENT_BINARY_DIR}/VectorFlowTargets.cmake
 	DESTINATION lib/cmake/VectorFlow
 	)
+
+#----------------------------------------------------------------------------------------------
+# Use absolute RPATH when linking to avoid needing to export LD_LIBRARY_PATH
+#
+set(CMAKE_SKIP_BUILD_RPATH FALSE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+# add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# RPATH to be used when installing, but only if it's not a system directory
+list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+if("${isSystemDir}" STREQUAL "-1")
+  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+endif("${isSystemDir}" STREQUAL "-1")
 
 if (BUILD_TESTING)
   add_subdirectory(magneticfield)
