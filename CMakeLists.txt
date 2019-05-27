@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.6.0)
 include(cmake/RecordCmdLine.cmake)
 
 option(BUILD_TESTING    "Build test binaries and create test target"  ON)
-option(BUILD_BENCHMARKS "Build binaries for performance benchmarking" OFF)
+option(BUILD_EXAMPLES "Build binaries for performance benchmarking" ON)
 set(VecCore_VERSION 0.5.0)
 
 if(BUILD_TESTING)
@@ -94,6 +94,6 @@ if (BUILD_TESTING)
 endif()
 
 
-if (BUILD_BENCHMARKS)
-  add_subdirectory(bench)
+if (BUILD_EXAMPLES)
+  add_subdirectory(event)
 endif()
