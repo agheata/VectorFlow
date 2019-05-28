@@ -9,10 +9,10 @@
 
 #include "base/Vector3D.h"
 #include <Geant/Config.h>
-#include <Geant/VectorTypes.h>
+#include <vectorFlow/VectorTypes.h>
 
-#include "Geant/SystemOfUnits.h"
-#include "Geant/PhysicalConstants.h"
+#include "vectorFlow/SystemOfUnits.h"
+#include "vectorFlow/PhysicalConstants.h"
 
 // #define OUTSIDE_MagFieldEquation 1
 
@@ -20,8 +20,8 @@ template <class Field>
 class MagFieldEquation {
 public:
   //  static const unsigned int  N   = Size;
-  using Double_v = geant::Double_v;
-  using Float_v  = geant::Float_v;
+  using Double_v = vectorflow::Double_v;
+  using Float_v  = vectorflow::Float_v;
 
   static constexpr double gCof = geant::units::kCLight; //   / fieldUnits::meter ;
 

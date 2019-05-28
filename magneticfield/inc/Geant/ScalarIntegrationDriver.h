@@ -18,7 +18,7 @@
 
 // class VScalarIntegrationStepper;
 #include "Geant/VScalarIntegrationStepper.h"
-#include "Geant/math_wrappers.h"
+#include "vectorFlow/math_wrappers.h"
 
 class ScalarIntegrationDriver {
 public:                                    // with description
@@ -213,7 +213,7 @@ public:
 
 inline double ScalarIntegrationDriver::ComputeAndSetErrcon()
 {
-  fErrcon = Math::Pow(fMaxSteppingIncrease / fSafetyFactor, 1.0 / fPowerGrow);
+  fErrcon = vectorflow::Math::Pow(fMaxSteppingIncrease / fSafetyFactor, 1.0 / fPowerGrow);
   return fErrcon;
 }
 

@@ -26,7 +26,7 @@
 #ifndef GEANT_PHYSICALCONSTANTS_H
 #define GEANT_PHYSICALCONSTANTS_H
 
-#include "Geant/SystemOfUnits.h"
+#include "vectorFlow/SystemOfUnits.h"
 
 namespace geant {
 namespace units {

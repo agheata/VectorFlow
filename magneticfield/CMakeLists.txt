@@ -7,6 +7,7 @@ file(GLOB headers inc/Geant/*.h)   # (T*.h inc/GU*.h)
 include_directories(
   inc
   ${CMAKE_SOURCE_DIR}/magneticfield/simplifiedCMS/inc
+  ${CMAKE_SOURCE_DIR}/base/inc
 )  
 
 # - print include directories

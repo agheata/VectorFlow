@@ -20,6 +20,7 @@
 #include "base/Vector3D.h"
 
 // #include "GUVTypes.hh"      // "globals.hh"
+#include "Geant/Config.h"
 #include "Geant/VVectorField.h" // required in inline method implementations
 
 class VScalarEquationOfMotion {

@@ -41,8 +41,8 @@
 #include "Geant/FlexIntegrationDriver.h"
 #include "Geant/FormattedReporter.h"
 
-#include "Geant/VectorTypes.h" //  Defines geant::Double_v
-#include "Geant/math_wrappers.h"
+#include "vectorFlow/VectorTypes.h" //  Defines geant::Double_v
+#include "vectorFlow/math_wrappers.h"
 
 #ifndef NO_FIELD_STATISTICS
 #define GVFLD_STATS 1
@@ -388,7 +388,7 @@ inline Real_v SimpleIntegrationDriver<T_Stepper, Nvar>::PowerIf(const Real_v val
     // Do expensive 'pow' only for continuing ('condition') lanes
     for (size_t i = 0; i < vecCore::VectorSize<Real_v>(); ++i) {
       if (vecCore::Get(condition, i)) {
-        double redFactor = Math::Pow(Get(value, i), exponent);
+        double redFactor = vectorflow::Math::Pow(Get(value, i), exponent);
         vecCore::Set(result, i, redFactor);
       }
     }
@@ -410,7 +410,7 @@ inline void SimpleIntegrationDriver<T_Stepper, Nvar>
     // void SimpleIntegrationDriver<Real_v, T_Stepper, Nvar>
     ::ComputeAndSetErrcon()
 {
-  fErrcon = Math::Pow(fMaxSteppingIncrease / kSafetyFactor, 1.0 / kPowerGrow);
+  fErrcon = vectorflow::Math::Pow(fMaxSteppingIncrease / kSafetyFactor, 1.0 / kPowerGrow);
   // return fErrcon;
 }
 
@@ -2003,7 +2003,7 @@ void SimpleIntegrationDriver<T_Stepper, Nvar>::AccurateAdvance(const FieldTrack 
                                                                double epsilon, // Can be scalar or varying
                                                                FieldTrack yOutput[], int nTracks, bool stillOK[]) const
 {
-  AccurateAdvance<geant::Double_v>(yInput, hstep, charge,
+  AccurateAdvance<vectorflow::Double_v>(yInput, hstep, charge,
                                    epsilon, // Can be scalar or varying
                                    yOutput, stillOK, nTracks);
 }

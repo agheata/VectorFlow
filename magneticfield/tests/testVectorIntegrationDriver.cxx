@@ -7,7 +7,7 @@
 #include <iomanip>
 #include <ctime>
 
-#include "Geant/SystemOfUnits.h"
+#include "vectorFlow/SystemOfUnits.h"
 
 // using fieldUnits::meter;
 using geant::units::millimeter;
@@ -17,7 +17,7 @@ using geant::units::tesla;
 using geant::units::degree;
 
 #include <base/Vector3D.h>
-#include <Geant/VectorTypes.h>
+#include <vectorFlow/VectorTypes.h>
 
 #include "Geant/UniformMagField.h"
 #include "Geant/MagFieldEquation.h"
@@ -59,7 +59,7 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
-using Double_v = geant::Double_v;
+using Double_v = vectorflow::Double_v;
 using Bool_v   = vecCore::Mask_v<Double_v>;
 
 int main(int argc, char *argv[])

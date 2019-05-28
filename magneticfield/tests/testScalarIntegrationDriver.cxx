@@ -11,7 +11,7 @@
 
 // #include "G4UniformMagField.hh"
 // #include "G4SystemOfUnits.hh"
-#include "Geant/SystemOfUnits.h"
+#include "vectorFlow/SystemOfUnits.h"
 #include <cfloat>
 
 // using fieldUnits::meter;

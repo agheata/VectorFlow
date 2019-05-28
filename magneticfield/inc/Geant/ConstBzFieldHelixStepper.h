@@ -9,7 +9,7 @@
 #define CONSTBzFIELDHELIXSTEPPER_H_
 
 #include <Geant/Config.h>
-#include <Geant/VectorTypes.h>
+#include <vectorFlow/VectorTypes.h>
 
 namespace geant {
 inline namespace GEANT_IMPL_NAMESPACE {

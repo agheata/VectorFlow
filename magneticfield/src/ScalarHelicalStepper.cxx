@@ -3,7 +3,7 @@
 //  Based on G4MagHelicalStepper  - meant for testing other steppers
 // --------------------------------------------------------------------
 
-#include "Geant/SystemOfUnits.h"
+#include "vectorFlow/SystemOfUnits.h"
 
 using geant::units::meter; //  Update to GeantV units ASAP
 using geant::units::GeV;
@@ -12,11 +12,11 @@ using geant::units::tesla;
 using geant::units::kPi;
 using geant::units::kTwoPi;
 
-#include "Geant/PhysicalConstants.h"
+#include "vectorFlow/PhysicalConstants.h"
 // using pi;
 
 #include "Geant/VScalarHelicalStepper.h"
-#include "Geant/math_wrappers.h"
+#include "vectorFlow/math_wrappers.h"
 // #include "Geant/GULineSection.h"
 
 // #include "ScalarFieldEquation.h"
@@ -52,6 +52,7 @@ void VScalarHelicalStepper::AdvanceHelix(const double yIn[], ThreeVector Bfld, d
   // OLD  approc_limit = 0.05 gives max.error=x^5/5!=(0.05)^5/5!=2.6*e-9
   // NEW  approc_limit = 0.005 gives max.error=x^5/5!=2.6*e-14
 
+  using namespace vectorflow;
   const double approc_limit = 0.005;
   ThreeVector Bnorm, B_x_P, vperp, vpar;
 
@@ -207,14 +208,13 @@ void VScalarHelicalStepper::StepWithErrorEstimate(const double yInput[],
 double VScalarHelicalStepper::DistChord(double /*charge*/) const
 {
   // Check whether h/R >  pi  !!
-  // Method DistLine is good only for <  pi
-
+  // Method DistLine is good only for <  pi  
   double Ang = GetAngCurve();
   if (Ang <= kPi) {
-    return GetRadHelix() * (1 - Math::Cos(0.5 * Ang));
+    return GetRadHelix() * (1 - vectorflow::Math::Cos(0.5 * Ang));
   } else {
     if (Ang < kTwoPi) {
-      return GetRadHelix() * (1 + Math::Cos(0.5 * (kTwoPi - Ang)));
+      return GetRadHelix() * (1 + vectorflow::Math::Cos(0.5 * (kTwoPi - Ang)));
     } else // return Diameter of projected circle
     {
       return 2 * GetRadHelix();

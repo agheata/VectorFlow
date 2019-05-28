@@ -2,9 +2,11 @@
 #ifndef VECTORFLOW_COCKTAIL_GENERATOR_H
 #define VECTORFLOW_COCKTAIL_GENERATOR_H
 
-#include "PrimaryGenerator.h"
-#include "Typedefs.h"
-#include "VecMath/Rng.h"
+#include "vectorFlow/PrimaryGenerator.h"
+#include "vectorFlow/Typedefs.h"
+#include "vectorFlow/RngWrapper.h"
+
+#include <atomic>
 
 namespace vectorflow {
   class Event;
@@ -26,12 +28,11 @@ template <> struct Generator_traits<CocktailGenerator> {
 
 class CocktailGenerator : public vectorflow::PrimaryGenerator<CocktailGenerator> {
 public:
-  using Base_t  = typename vectorflow::PrimaryGenerator<CocktailGenerator>;
   using Event_t = vectorflow::Event;
   using Backend_t = vecCore::backend::Scalar;
   // CTR DTR
-  CocktailGenerator(vecgeom::Vector3D<double> const &vertex) : Base_t(vertex) {}
-  ~CocktailGenerator() {}
+  CocktailGenerator(vecgeom::Vector3D<double> const &vertex);
+  ~CocktailGenerator();
 
   // interface methods
   bool InitPrimaryGenerator();
@@ -39,6 +40,8 @@ public:
   Event_t *NextEvent();
 
   // public setters/getters
+  void SetMaxDepth(int depth) { fMaxDepth = depth; }
+  int GetMaxDepth() const { return fMaxDepth; }
   void SetMaxPrimaryPerEvt(const int pperevt) { fMaxPrimaries = pperevt; }
   int GetMaxPrimaryPerEvt() const { return fMaxPrimaries; }
   void SetAvgPrimaryPerEvt(const int average) { fAveragePrimaries = average; }
@@ -58,19 +61,21 @@ private:
   CocktailGenerator &operator=(const CocktailGenerator &) = delete;
 
 private:
-  bool fInitialized;                               ///< Generator initialized
-  std::vector<std::pair<int, double>> fSpecies;    ///< Species of particles and their weights in the generator
-  int fMaxPrimaries            = 0;                ///< Maximum number of primaries per event
-  int fAveragePrimaries        = 0;                ///< average number of primaries per event
+  bool fInitialized;                                ///< Generator initialized
+  std::vector<std::pair<int, float>> fSpecies;     ///< Species of particles and their weights in the generator
+  int fMaxPrimaries             = 0;                ///< Maximum number of primaries per event
+  int fAveragePrimaries         = 0;                ///< average number of primaries per event
+  int fMaxDepth                 = 0;                ///< Geometry maximum depth
   
 //  std::string gNameParticlesVector[];
 //  std::map<std::string, int> gPrimaryNameToIndexMap;
   
-  double fMinBeamEnergy        = 0.;               ///< Minimum particle energy
-  double fMaxBeamEnergy        = 0.;               ///< Maximum particle energy
+  double fMinBeamEnergy         = 0.;               ///< Minimum particle energy
+  double fMaxBeamEnergy         = 0.;               ///< Maximum particle energy
 
-  vecgeom::Vector3D<double> fVertex;               ///< Vertex position
-  vecRng::MRG32k3a<Backend_t> fRng; ///< Random number generator
+  vecgeom::Vector3D<double> fVertex;                ///< Vertex position
+  std::atomic_int fCurrentEvent;                    ///< Currently generated event number
+  vectorflow::RngWrapper *fRndm = nullptr;          ///< Random number generator
 };
 
 #endif // CocktailGenerator
