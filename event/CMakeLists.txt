@@ -1,7 +1,10 @@
 #----------------------------------------------------------------------------------------------
 # Add source files & include directories
 #
-include_directories("${PROJECT_SOURCE_DIR}/event/inc")
+include_directories(
+  "${PROJECT_SOURCE_DIR}/event/inc"
+  "${PROJECT_SOURCE_DIR}/base/inc"
+)
 
 file(GLOB sources src/*.cxx)
 file(GLOB headers inc/*.h)

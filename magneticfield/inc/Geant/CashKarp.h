@@ -29,7 +29,7 @@ public:
   template <typename T>
   using Vector3D = vecgeom::Vector3D<T>;
 
-  using Double_v        = geant::Double_v;
+  using Double_v        = vectorflow::Double_v;
   using ThreeVectorSimd = Vector3D<Double_v>;
 
   static constexpr unsigned int sOrderMethod = 4;

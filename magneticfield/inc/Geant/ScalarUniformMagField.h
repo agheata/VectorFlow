@@ -10,8 +10,8 @@
 
 #include "base/Vector3D.h"
 
-#include "Geant/SystemOfUnits.h"
-#include "Geant/math_wrappers.h"
+#include "vectorFlow/SystemOfUnits.h"
+#include "vectorFlow/math_wrappers.h"
 // #include "Geant/PhysicalConstants.h"
 
 class ScalarUniformMagField : public VVectorField {
@@ -91,6 +91,7 @@ ScalarUniformMagField &ScalarUniformMagField::operator=(const ScalarUniformMagFi
 ScalarUniformMagField::ScalarUniformMagField(double vField, double vTheta, double vPhi)
     : VVectorField(gNumFieldComponents, gFieldChangesEnergy)
 {
+  using namespace vecCore::math;
   if ((vField < 0) || (vTheta < 0) || (vTheta > geant::units::kPi) || (vPhi < 0) || (vPhi > geant::units::kTwoPi)) {
     // Exception("ScalarUniformMagField::ScalarUniformMagField()",
     //     "GeomField0002", FatalException, "Invalid parameters.") ;
@@ -103,7 +104,7 @@ ScalarUniformMagField::ScalarUniformMagField(double vField, double vTheta, doubl
     std::cerr << " - Magnitude vField: Value = " << vField << "  Expected vField > 0 " << geant::units::kTwoPi
               << std::endl;
   }
-  fFieldComponents.Set(vField * Math::Sin(vTheta) * Math::Cos(vPhi), vField * Math::Sin(vTheta) * Math::Sin(vPhi),
-                       vField * Math::Cos(vTheta));
+  fFieldComponents.Set(vField * Sin(vTheta) * Cos(vPhi), vField * Sin(vTheta) * Sin(vPhi),
+                       vField * Cos(vTheta));
 }
 #endif

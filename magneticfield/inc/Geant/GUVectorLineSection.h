@@ -14,10 +14,10 @@
 #define GUVectorLineSection_hh
 
 #include <base/Vector3D.h>
-#include <Geant/VectorTypes.h>
+#include <vectorFlow/VectorTypes.h>
 
 class GUVectorLineSection {
-  using Double_v = geant::Double_v;
+  using Double_v = vectorflow::Double_v;
 
 public: // with description
   template <typename T>
@@ -47,19 +47,19 @@ inline GUVectorLineSection::GUVectorLineSection(const ThreeVectorSimd &PntA, con
   fABdistanceSq = VecAtoB.Mag2();
 }
 
-inline geant::Double_v GUVectorLineSection::GetABdistanceSq() const
+inline vectorflow::Double_v GUVectorLineSection::GetABdistanceSq() const
 {
   return fABdistanceSq;
 }
 
-inline geant::Double_v GUVectorLineSection::Distline(const ThreeVectorSimd &OtherPnt, const ThreeVectorSimd &LinePntA,
+inline vectorflow::Double_v GUVectorLineSection::Distline(const ThreeVectorSimd &OtherPnt, const ThreeVectorSimd &LinePntA,
                                                      const ThreeVectorSimd &LinePntB)
 {
   GUVectorLineSection LineAB(LinePntA, LinePntB); // Line from A to B
   return LineAB.Dist(OtherPnt);
 }
 
-inline geant::Double_v GUVectorLineSection::Dist(ThreeVectorSimd OtherPnt) const
+inline vectorflow::Double_v GUVectorLineSection::Dist(ThreeVectorSimd OtherPnt) const
 {
   Double_v dist_sq;
   ThreeVectorSimd VecAZ;

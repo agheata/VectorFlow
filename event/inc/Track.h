@@ -14,14 +14,14 @@
 #define VECTORFLOW_TRACK
 
 #include "base/Vector3D.h"
-#include "math_wrappers.h"
+#include "vectorFlow/math_wrappers.h"
 
 #include <functional>
 #include <climits>
 #include <float.h>
 #include <atomic>
 #include <mutex>
-#include "Typedefs.h"
+#include "vectorFlow/Typedefs.h"
 
 #ifndef GEANT_ALIGN_PADDING
 #define GEANT_ALIGN_PADDING 64

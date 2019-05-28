@@ -5,7 +5,7 @@
 #include "VecCore/VecCore"
 #include <VecMath/Math.h>
 
-namespace veccore {
+namespace vectorflow {
 namespace Math {
 template <typename T>
 inline T Min(T const &val1, T const &val2)
@@ -177,6 +177,6 @@ inline void RotateToLabFrame(R &u, R &v, R &w, R u1, R u2, R u3)
 }
 
 } // namespace Math
-} // namespace veccore
+} // namespace vectorflow
 
 #endif // GEANT_MATH

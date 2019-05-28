@@ -3,10 +3,8 @@
 
 #include <base/Global.h>
 #include <base/Vector3D.h>
-#include <Geant/Config.h>
 
-namespace geant {
-inline namespace GEANT_IMPL_NAMESPACE {
+namespace vectorflow {
 
 using VectorBackend = vecgeom::VectorBackend;
 typedef VectorBackend::Float_v Float_v;
@@ -26,7 +24,7 @@ const int kVecLenD = vecCore::VectorSize<Double_v>();
 const auto kVecAlignD = sizeof(Double_v);
 const auto kVecAlignF = sizeof(Float_v);
 
-GEANT_FORCE_INLINE
+inline
 void CopyFltToDbl(Float_v const &flt_v, Double_v &dbl1_v, Double_v &dbl2_v)
 {
   // Copy the float SIMD lanes into 2 Double_v variables
@@ -36,7 +34,7 @@ void CopyFltToDbl(Float_v const &flt_v, Double_v &dbl1_v, Double_v &dbl2_v)
   }
 }
 
-GEANT_FORCE_INLINE
+inline
 void CopyFltToDbl(vecgeom::Vector3D<Float_v> const &flt_v, vecgeom::Vector3D<Double_v> &dbl1_v,
                   vecgeom::Vector3D<Double_v> &dbl2_v)
 {
@@ -49,7 +47,7 @@ void CopyFltToDbl(vecgeom::Vector3D<Float_v> const &flt_v, vecgeom::Vector3D<Dou
   }
 }
 
-GEANT_FORCE_INLINE
+inline
 void CopyDblToFlt(Double_v const &dbl1_v, Double_v const &dbl2_v, Float_v &flt_v)
 {
   // Copy the 2 Double_v SIMD lanes into one Float_v variable
@@ -59,7 +57,7 @@ void CopyDblToFlt(Double_v const &dbl1_v, Double_v const &dbl2_v, Float_v &flt_v
   }
 }
 
-GEANT_FORCE_INLINE
+inline
 void CopyDblToFlt(vecgeom::Vector3D<Double_v> const &dbl1_v, vecgeom::Vector3D<Double_v> const &dbl2_v,
                   vecgeom::Vector3D<Float_v> &flt_v)
 {
@@ -72,7 +70,6 @@ void CopyDblToFlt(vecgeom::Vector3D<Double_v> const &dbl1_v, vecgeom::Vector3D<D
   }
 }
 
-} // namespace GEANT_IMPL_NAMESPACE
-} // namespace geant
+} // namespace vectorflow
 
 #endif

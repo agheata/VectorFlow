@@ -34,7 +34,7 @@ public:
   Event() : fNtracks(0) {}
 
   /// Event destructor
-  ~Event() {}
+  ~Event() { Clear(); }
 
   /// Function for accounting adding a new track.
   int AddTrack();

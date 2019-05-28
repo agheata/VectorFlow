@@ -36,7 +36,7 @@
 #include <vector>
 #include "base/Vector3D.h"
 #include "base/Global.h"
-#include <Geant/VectorTypes.h>
+#include <vectorFlow/VectorTypes.h>
 
 // #include "GUVTypes.hh"
 // #include "globals.hh"
@@ -48,8 +48,8 @@
 class VVectorField {
 
 public: // with description
-  using Double_v = geant::Double_v;
-  using Float_v  = geant::Float_v;
+  using Double_v = vectorflow::Double_v;
+  using Float_v  = vectorflow::Float_v;
 
   template <typename T>
   using Vector3D = vecgeom::Vector3D<T>;

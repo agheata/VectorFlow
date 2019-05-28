@@ -7,7 +7,7 @@
 #include <iomanip>
 
 #include "base/Vector3D.h"
-#include <Geant/VectorTypes.h>
+#include <vectorFlow/VectorTypes.h>
 
 using namespace vecCore::math;
 
@@ -21,7 +21,7 @@ using namespace vecCore::math;
 // #include "SimpleRunge.h"
 // #include "ExactHelixStepper.h"
 
-#include "Geant/SystemOfUnits.h"
+#include "vectorFlow/SystemOfUnits.h"
 
 // using geant::meter;
 using geant::units::millimeter;
@@ -89,7 +89,7 @@ int main(int argc, char *args[])
   // using Backend = vecgeom::kVc ;
   // typedef typename Backend::precision_v Double_v;
 
-  using Double_v = geant::Double_v;
+  using Double_v = vectorflow::Double_v;
   // template <typename Tpod>
   // using Vector3D  = vecgeom::Vector3D<Tpod>;
   using ThreeVector_f = vecgeom::Vector3D<float>;
