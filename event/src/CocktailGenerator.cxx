@@ -52,7 +52,7 @@ void CocktailGenerator::AddPrimary(const char *name, float weight)
     return;
   }
   auto p = std::make_pair(particle->GetInternalCode(), weight);
-  if (std::find(fSpecies.begin(), fSpecies.end(), p) != fSpecies.end())
+  if (std::find(fSpecies.begin(), fSpecies.end(), p) == fSpecies.end())
     fSpecies.push_back(p);
 }
 
