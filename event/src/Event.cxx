@@ -1,6 +1,7 @@
 #include "Event.h"
 #include "Track.h"
 #include <iostream>
+#include <string.h>
 
 namespace vectorflow {
 
@@ -24,10 +25,11 @@ void Event::Clear()
 }
 
 //______________________________________________________________________________
-void Event::Print(const char *) const
+void Event::Print(const char * str)
 {
   // Print events content
-  std::cout << "Event " << fEvent << ": " << GetNprimaries() << " primaries, " << GetNtracks() << " tracks." << std::endl;
+  std::cout << "Event " << fEvent << ": " << GetNprimaries() << " primaries, " << GetNtracks() << " tracks.\n" << std::endl;
+  if (strcmp(str, "ALL") == 0) vectorflow::Track::PrintTracks(fPrimaries);
 }
 
 } // namespace geant
