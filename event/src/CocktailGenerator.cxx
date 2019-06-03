@@ -4,6 +4,8 @@
 #include "Track.h"
 #include "Particle.h"
 #include "vectorFlow/PhysicalConstants.h"
+#include <map>
+#include <string>
 
 CocktailGenerator::CocktailGenerator(vecgeom::Vector3D<double> const &vertex)
   : vectorflow::PrimaryGenerator<CocktailGenerator>(vertex)
@@ -69,6 +71,9 @@ CocktailGenerator::Event_t *CocktailGenerator::NextEvent()
   int maxtracks = fMaxPrimaries;
   int ntracks = fRndm->uniform(mintracks, maxtracks);
   
+  // Map that will count the number of different particles in the event
+  std::map<std::string, int> observedParticles;
+
   // Generate random tracks having 
   for (int i = 0; i < ntracks; ++i) {
     // Generate particle species
@@ -109,6 +114,14 @@ CocktailGenerator::Event_t *CocktailGenerator::NextEvent()
     // geometry state not yet initialized
     // Add track to the current event
     event->AddPrimary(track);
+
+    // Count particles
+    observedParticles[particle->GetName()]++;
   }
+
+  // Print particles
+  for (auto it = observedParticles.begin(); it != observedParticles.end(); it++)
+      std::cout << "Particle: " << it->first << "\tCount: " << it->second << "\n";
+  
   return event;
 }
