@@ -16,6 +16,14 @@ add_library(VFevent SHARED ${sources} )
 target_link_libraries(VFevent -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${VECGEOM_LIBRARIES})
 
 #----------------------------------------------------------------------------------------------
+# Install the files
+#
+install(TARGETS VFevent LIBRARY DESTINATION lib)
+install(FILES ${headers} DESTINATION inc)
+
+add_subdirectory(test)
+
+#----------------------------------------------------------------------------------------------
 # Add this directory to Doxygen
 #
 if(DOXYGEN_FOUND)

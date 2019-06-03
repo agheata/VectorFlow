@@ -74,7 +74,7 @@ public:
   void SetVertex(double x, double y, double z) { fVertex.Set(x, y, z); }
 
   /// Print function.
-  void Print(const char *option = "") const;
+  void Print(const char *option = "");
 }; // Event
 
 } // namespace vectorflow
