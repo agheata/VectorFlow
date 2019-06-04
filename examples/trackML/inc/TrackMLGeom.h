@@ -118,6 +118,7 @@ struct ErrorUV_t {
 
 struct VolumeData_t {
   std::vector<Module_t> fModules; ///< List of different modules in the volume
+  std::vector<vecgeom::LogicalVolume *> fLayers; ///< Pointers to layer volumes
   vecgeom::LogicalVolume *fVol =
       nullptr;      ///< Pointer to corresponding logical volume
   ErrorUV_t fErrUV; ///< UV components of pixel errors
@@ -156,6 +157,9 @@ private:
 
   /// Fill one record from one line read from the geometry file.
   void GetRecord(std::string const &line, Record_t &rec) const;
+
+  /// Create containers for packing together detectors, layers and modules
+  LogicalVolume *CreateContainers();
 };
 } // namespace trackml
 #endif
