@@ -25,10 +25,10 @@ class Track;
 class Event {
 
 private:
-  vecgeom::Vector3D<double> fVertex; ///< Vertex position
-  int fEvent         = 0;            ///< Event number
-  std::atomic_int fNtracks;          ///< Total number of tracks
-  std::vector<Track *> fPrimaries;   ///< Vector containing all primary tracks
+  vecgeom::Vector3D<double> fVertex;         ///< Vertex position
+  int fEvent         = 0;                    ///< Event number
+  std::atomic_int fNtracks;                  ///< Total number of tracks
+  mutable std::vector<Track *> fPrimaries;   ///< Vector containing all primary tracks
 public:
   /// Event default constructor
   Event() : fNtracks(0) {}
@@ -74,7 +74,7 @@ public:
   void SetVertex(double x, double y, double z) { fVertex.Set(x, y, z); }
 
   /// Print function.
-  void Print(const char *option = "");
+  void Print(const char *option = "") const;
 }; // Event
 
 } // namespace vectorflow
