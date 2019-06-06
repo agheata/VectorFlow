@@ -13,6 +13,12 @@
 #include <volumes/LogicalVolume.h>
 #include <volumes/Trd.h>
 #include <volumes/Tube.h>
+#include "navigation/VNavigator.h"
+#include "navigation/SimpleNavigator.h"
+#include "navigation/NewSimpleNavigator.h"
+#include "navigation/SimpleABBoxNavigator.h"
+#include "navigation/SimpleABBoxLevelLocator.h"
+#include "navigation/HybridNavigator2.h"
 
 namespace trackml {
 
@@ -20,12 +26,14 @@ TrackMLGeom::TrackMLGeom() {}
 
 TrackMLGeom::~TrackMLGeom() {}
 
+//_____________________________________________________________________________
 vecgeom::VPlacedVolume *TrackMLGeom::CreateGeometry(const char *filename) {
   using namespace vecgeom;
   using geant::units::mm;
   using vecCore::math::Sqrt;
 
   std::ifstream infile(filename);
+  // Make sure the file is good
   try {
     if (!infile.good()) {
       std::string err =
@@ -38,6 +46,7 @@ vecgeom::VPlacedVolume *TrackMLGeom::CreateGeometry(const char *filename) {
     return nullptr;
   }
 
+  // Create logical volume containers for the world volume, inner silicon pixels and two outer layers of silicon strips
   LogicalVolume *lWorld = CreateContainers();
 
   // Now read in the detailed module geometry
@@ -165,11 +174,32 @@ vecgeom::VPlacedVolume *TrackMLGeom::CreateGeometry(const char *filename) {
   return pWorld;
 }
 
+//_____________________________________________________________________________
+void CreateNavigators()
+{
+// Create all navigators.
+  for (auto &lvol : vecgeom::GeoManager::Instance().GetLogicalVolumesMap()) {
+    if (lvol.second->GetDaughtersp()->size() < 4) {
+      lvol.second->SetNavigator(vecgeom::NewSimpleNavigator<>::Instance());
+    }
+    if (lvol.second->GetDaughtersp()->size() >= 5) {
+      lvol.second->SetNavigator(vecgeom::SimpleABBoxNavigator<>::Instance());
+    }
+    if (lvol.second->GetDaughtersp()->size() >= 10) {
+      lvol.second->SetNavigator(vecgeom::HybridNavigator<>::Instance());
+      vecgeom::HybridManager2::Instance().InitStructure((lvol.second));
+    }
+    lvol.second->SetLevelLocator(vecgeom::SimpleABBoxLevelLocator::GetInstance());
+  } 
+}
+
+//_____________________________________________________________________________
 bool TrackMLGeom::ExportToROOT(const char *filename) {
   return vecgeom::RootGeoManager::Instance().ExportToROOTGeometry(
       fWorld, std::string(filename));
 }
 
+//_____________________________________________________________________________
 vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
   using namespace vecgeom;
   // Create world volume.
@@ -178,19 +208,20 @@ vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
   Transformation3D *ident = new Transformation3D();
   LogicalVolume *lWorld = new LogicalVolume("world", uWorld);
 
-  // Pixels
+  // Pixels container volume (volumes 7, 8 and 9)
   auto uPixVol = GeoManager::MakeInstance<UnplacedTube>(
       kPixVolRmin, kPixVolRmax, kPixVolDz, 0., kTwoPi);
   auto lPixVol = new LogicalVolume("Pix", uPixVol);
   auto *pPixVol = lWorld->PlaceDaughter("Pix", lPixVol, ident);
 
+  // Pixels volume 7 container
   auto uPixVol7 = GeoManager::MakeInstance<UnplacedTube>(
       kPixVol7Rmin, kPixVol7Rmax, kPixVol7Dz, 0., kTwoPi);
   auto lPixVol7 = new LogicalVolume("Pix7", uPixVol7);
   fVolData[7].fVol = lPixVol7;
   Transformation3D *trPixVol7 = new Transformation3D(0., 0., kPixVol7Z);
   auto *pPixVol7 = lPixVol->PlaceDaughter("Pix7", lPixVol7, trPixVol7);
-  // Layers in Pixel volume 7
+  // Layer containers in Pixel volume 7 (disks)
   for (auto i = 0; i < kPixVol7Nlayers; ++i) {
     std::stringstream name;
     name << "Layer" << 2 * i;
@@ -204,12 +235,13 @@ vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
         lPixVol7->PlaceDaughter(name.str().c_str(), lLayerVol7, trLayer);
   }
 
+  // Pixels volume 8 container
   auto uPixVol8 = GeoManager::MakeInstance<UnplacedTube>(
       kPixVol8Rmin, kPixVol8Rmax, kPixVol8Dz, 0., kTwoPi);
   auto lPixVol8 = new LogicalVolume("Pix8", uPixVol8);
   fVolData[8].fVol = lPixVol8;
   auto *pPixVol8 = lPixVol->PlaceDaughter("Pix8", lPixVol8, ident);
-  // Layers in Pixel volume 8
+  // Layers in Pixel volume 8 (tube layers)
   for (auto i = 0; i < kPixVol8Nlayers; ++i) {
     std::stringstream name;
     name << "Layer" << 2 * i;
@@ -222,13 +254,14 @@ vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
         lPixVol8->PlaceDaughter(name.str().c_str(), lLayerVol8, ident);
   }
 
+  // Pixels volume 9 container
   auto uPixVol9 = GeoManager::MakeInstance<UnplacedTube>(
       kPixVol9Rmin, kPixVol9Rmax, kPixVol9Dz, 0., kTwoPi);
   auto lPixVol9 = new LogicalVolume("Pix9", uPixVol9);
   fVolData[9].fVol = lPixVol9;
   Transformation3D *trPixVol9 = new Transformation3D(0., 0., kPixVol9Z);
   auto *pPixVol9 = lPixVol->PlaceDaughter("Pix9", lPixVol9, trPixVol9);
-  // Layers in Pixel volume 9
+  // Layers in Pixel volume 9 (disks)
   for (auto i = 0; i < kPixVol9Nlayers; ++i) {
     std::stringstream name;
     name << "Layer" << 2 * i;
@@ -242,12 +275,13 @@ vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
         lPixVol9->PlaceDaughter(name.str().c_str(), lLayerVol9, trLayer);
   }
 
-  // Strips1
+  // Strips1 container (volumes 12, 13 and 14)
   auto uStrips1Vol = GeoManager::MakeInstance<UnplacedTube>(
       kStrips1VolRmin, kStrips1VolRmax, kStrips1VolDz, 0., kTwoPi);
   auto lStrips1Vol = new LogicalVolume("Strips1", uStrips1Vol);
   auto *pStrips1Vol = lWorld->PlaceDaughter("Strips1", lStrips1Vol, ident);
 
+  // Volume 12 container
   auto uStrips1Vol12 = GeoManager::MakeInstance<UnplacedTube>(
       kStrips1Vol12Rmin, kStrips1Vol12Rmax, kStrips1Vol12Dz, 0., kTwoPi);
   auto lStrips1Vol12 = new LogicalVolume("Strips1_12", uStrips1Vol12);
@@ -256,7 +290,7 @@ vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
       new Transformation3D(0., 0., kStrips1Vol12Z);
   auto *pStrips1Vol12 =
       lStrips1Vol->PlaceDaughter("Strips1_12", lStrips1Vol12, trStrips1Vol12);
-  // Layers in Strips1 volume 12
+  // Layers in Strips1 volume 12 (disks)
   for (auto i = 0; i < kStrips1Vol12Nlayers; ++i) {
     std::stringstream name;
     name << "Layer" << 2 * i;
@@ -270,13 +304,14 @@ vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
         lStrips1Vol12->PlaceDaughter(name.str().c_str(), lLayerVol12, trLayer);
   }
 
+  // Volume 13 container
   auto uStrips1Vol13 = GeoManager::MakeInstance<UnplacedTube>(
       kStrips1Vol13Rmin, kStrips1Vol13Rmax, kStrips1Vol13Dz, 0., kTwoPi);
   auto lStrips1Vol13 = new LogicalVolume("Strips1_13", uStrips1Vol13);
   fVolData[13].fVol = lStrips1Vol13;
   auto *pStrips1Vol13 =
       lStrips1Vol->PlaceDaughter("Strips1_13", lStrips1Vol13, ident);
-  // Layers in Strips1 volume 13
+  // Layers in Strips1 volume 13 (tube layers)
   for (auto i = 0; i < kStrips1Vol13Nlayers; ++i) {
     std::stringstream name;
     name << "Layer" << 2 * i;
@@ -290,6 +325,7 @@ vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
         lStrips1Vol13->PlaceDaughter(name.str().c_str(), lLayerVol13, ident);
   }
 
+  // Volume 14 container
   auto uStrips1Vol14 = GeoManager::MakeInstance<UnplacedTube>(
       kStrips1Vol14Rmin, kStrips1Vol14Rmax, kStrips1Vol14Dz, 0., kTwoPi);
   auto lStrips1Vol14 = new LogicalVolume("Strips1_14", uStrips1Vol14);
@@ -298,7 +334,7 @@ vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
       new Transformation3D(0., 0., kStrips1Vol14Z);
   auto *pStrips1Vol14 =
       lStrips1Vol->PlaceDaughter("Strips1_14", lStrips1Vol14, trStrips1Vol14);
-  // Layers in Strips1 volume 14
+  // Layers in Strips1 volume 14 (disks)
   for (auto i = 0; i < kStrips1Vol14Nlayers; ++i) {
     std::stringstream name;
     name << "Layer" << 2 * i;
@@ -312,12 +348,13 @@ vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
         lStrips1Vol14->PlaceDaughter(name.str().c_str(), lLayerVol14, trLayer);
   }
 
-  // Strips2
+  // Strips2 container (volumes 16, 17 and 18)
   auto uStrips2Vol = GeoManager::MakeInstance<UnplacedTube>(
       kStrips2VolRmin, kStrips2VolRmax, kStrips2VolDz, 0., kTwoPi);
   auto lStrips2Vol = new LogicalVolume("Strips2", uStrips2Vol);
   auto *pStrips2Vol = lWorld->PlaceDaughter("Strips2", lStrips2Vol, ident);
 
+  // Volume 16 container
   auto uStrips2Vol16 = GeoManager::MakeInstance<UnplacedTube>(
       kStrips2Vol16Rmin, kStrips2Vol16Rmax, kStrips2Vol16Dz, 0., kTwoPi);
   auto lStrips2Vol16 = new LogicalVolume("Strips2_16", uStrips2Vol16);
@@ -326,7 +363,7 @@ vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
       new Transformation3D(0., 0., kStrips2Vol16Z);
   auto *pStrips2Vol16 =
       lStrips2Vol->PlaceDaughter("Strips2_16", lStrips2Vol16, trStrips2Vol16);
-  // Layers in Strips2 volume 16
+  // Layers in Strips2 volume 16 (disks)
   for (auto i = 0; i < kStrips2Vol16Nlayers; ++i) {
     std::stringstream name;
     name << "Layer" << 2 * i;
@@ -340,13 +377,14 @@ vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
         lStrips2Vol16->PlaceDaughter(name.str().c_str(), lLayerVol16, trLayer);
   }
 
+  // Volume 17 container
   auto uStrips2Vol17 = GeoManager::MakeInstance<UnplacedTube>(
       kStrips2Vol17Rmin, kStrips2Vol17Rmax, kStrips2Vol17Dz, 0., kTwoPi);
   auto lStrips2Vol17 = new LogicalVolume("Strips2_17", uStrips2Vol17);
   fVolData[17].fVol = lStrips2Vol17;
   auto *pStrips2Vol17 =
       lStrips2Vol->PlaceDaughter("Strips2_17", lStrips2Vol17, ident);
-  // Layers in Strips2 volume 17
+  // Layers in Strips2 volume 17 (tube layers)
   for (auto i = 0; i < kStrips2Vol17Nlayers; ++i) {
     std::stringstream name;
     name << "Layer" << 2 * i;
@@ -360,6 +398,7 @@ vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
         lStrips2Vol17->PlaceDaughter(name.str().c_str(), lLayerVol17, ident);
   }
 
+  // Volume 18 container
   auto uStrips2Vol18 = GeoManager::MakeInstance<UnplacedTube>(
       kStrips2Vol18Rmin, kStrips2Vol18Rmax, kStrips2Vol18Dz, 0., kTwoPi);
   auto lStrips2Vol18 = new LogicalVolume("Strips2_18", uStrips2Vol18);
@@ -368,7 +407,7 @@ vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
       new Transformation3D(0., 0., kStrips2Vol18Z);
   auto *pStrips2Vol18 =
       lStrips2Vol->PlaceDaughter("Strips2_18", lStrips2Vol18, trStrips2Vol18);
-  // Layers in Strips2 volume 18
+  // Layers in Strips2 volume 18 (disks)
   for (auto i = 0; i < kStrips2Vol18Nlayers; ++i) {
     std::stringstream name;
     name << "Layer" << 2 * i;
@@ -384,6 +423,7 @@ vecgeom::LogicalVolume *TrackMLGeom::CreateContainers() {
   return lWorld;
 }
 
+//_____________________________________________________________________________
 void TrackMLGeom::GetRecord(std::string const &line, Record_t &rec) const {
   using geant::units::mm;
   std::stringstream linestream(line);

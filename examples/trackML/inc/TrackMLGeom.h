@@ -160,6 +160,7 @@ private:
 
   /// Create containers for packing together detectors, layers and modules
   LogicalVolume *CreateContainers();
+  void CreateNavigators();
 };
 } // namespace trackml
 #endif
