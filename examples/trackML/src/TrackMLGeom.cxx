@@ -170,12 +170,13 @@ vecgeom::VPlacedVolume *TrackMLGeom::CreateGeometry(const char *filename) {
 
   VPlacedVolume *pWorld = lWorld->Place();
   GeoManager::Instance().SetWorldAndClose(pWorld);
+  CreateNavigators();
   fWorld = pWorld;
   return pWorld;
 }
 
 //_____________________________________________________________________________
-void CreateNavigators()
+void TrackMLGeom::CreateNavigators()
 {
 // Create all navigators.
   for (auto &lvol : vecgeom::GeoManager::Instance().GetLogicalVolumesMap()) {
