@@ -97,4 +97,5 @@ endif()
 
 if (BUILD_EXAMPLES)
   add_subdirectory(event)
+  add_subdirectory(examples)
 endif()
