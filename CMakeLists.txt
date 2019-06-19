@@ -90,6 +90,8 @@ if("${isSystemDir}" STREQUAL "-1")
 endif("${isSystemDir}" STREQUAL "-1")
 
 add_subdirectory(base)
+add_subdirectory(interface)
+
 if (BUILD_TESTING)
   add_subdirectory(magneticfield)
 endif()
