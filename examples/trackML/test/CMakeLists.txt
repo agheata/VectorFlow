@@ -1,6 +1,7 @@
 include_directories(
   ${CMAKE_SOURCE_DIR}/examples/trackML/inc
   ${CMAKE_SOURCE_DIR}/magneticfield/inc
+  ${CMAKE_SOURCE_DIR}/event/inc
 )
 #----------------------------------------------------------------------------------------------
 # Add the executables

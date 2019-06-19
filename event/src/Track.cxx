@@ -5,8 +5,10 @@ namespace vectorflow {
 //______________________________________________________________________________
 Track::Track(size_t maxdepth)
 {
-  fPath = VolumePath_t::MakeInstance(maxdepth);
-  fNextpath = VolumePath_t::MakeInstance(maxdepth);
+  if (maxdepth) {
+    fPath = VolumePath_t::MakeInstance(maxdepth);
+    fNextpath = VolumePath_t::MakeInstance(maxdepth);
+  }
 }
 
 //______________________________________________________________________________
@@ -95,7 +97,18 @@ void Track::Reset(Track const &blueprint)
   fNextpath->Clear();
 }
 
-//______________________________________________________________________________p
+//______________________________________________________________________________
+void Track::SetMaxDepth(int depth)
+{
+  if (fPath) {
+    VolumePath_t::ReleaseInstance(fPath);
+    VolumePath_t::ReleaseInstance(fNextpath);
+  }
+  fPath = VolumePath_t::MakeInstance(depth);
+  fNextpath = VolumePath_t::MakeInstance(depth);
+}
+
+//______________________________________________________________________________
 void Track::SetPath(VolumePath_t const *const path)
 {
   // Set path.
