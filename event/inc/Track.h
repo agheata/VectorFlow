@@ -92,7 +92,7 @@ public:
   static constexpr double kTiny = 1.E-50;
 
   /// Track constructor
-  Track(size_t maxdepth);
+  Track(size_t maxdepth = 0);
 
 public:
   /// Track destructor
@@ -433,6 +433,9 @@ public:
 
   /// Setter for particle mass
   void SetMass(double mass) { fMass = mass; }
+
+  /// Setter for the maximum geometry depth
+  void SetMaxDepth(int depth);
 
   /// Setter for position from components
   void SetPosition(double x, double y, double z)  { fPos.Set(x, y, z); }
