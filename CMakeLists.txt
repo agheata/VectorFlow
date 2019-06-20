@@ -106,6 +106,7 @@ add_subdirectory(base)
 add_subdirectory(interface)
 
 if (BUILD_TESTING)
+  add_subdirectory(test)
   add_subdirectory(magneticfield)
 endif()
 

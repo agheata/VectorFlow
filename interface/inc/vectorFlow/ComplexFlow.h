@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <array>
-#include <vectorFlow/Work.h>
+#include <vectorFlow/Flow.h>
 
 namespace vectorflow {
 
@@ -14,13 +14,15 @@ for each of them. Each task can execute in scalar or vector mode only on the dat
 After execution, the data will be dispatched to another task basket, not necessary the one following in the
 sequence of work.
 */ 
-template <typename Data, typename DataContainer, typename NSeq>
-class ComplexFlow() : public Flow<Data, DataContainer, NSeq>
+template <typename Data, typename DataContainer, std::size_t NSeq>
+class ComplexFlow : public Flow<Data, DataContainer, NSeq>
 {
-  using size_t    = std::size_t;
-  using Work_t    = Work<Data, DataContainer>;
-  using WorkSeq_t = std::array<Work, NSeq>;
-  using BasketSeq_t = std::array<DataContainer, NSeq>;
+  using Base_t = Flow<Data, DataContainer, NSeq>;
+  using typename Base_t::size_t;
+  using typename Base_t::Work_t;
+  using typename Base_t::WorkSeq_t;
+
+  using typename Base_t::BasketSeq_t;
 
 private:
   BasketSeq_t fBaskets;             ///< Sequence of baskets for each stage in the workflow
@@ -41,16 +43,24 @@ public:
 
   /// Getters for input data
   size_t GetNinput(size_t stage) const { return fBaskets[stage].size(); }
+  size_t GetNstates() const
+  { 
+    size_t nstates = 0;
+    for (auto basket : fBaskets)
+      nstates += basket.size();
+    return nstates;
+  }
+
   DataContainer &InputData(size_t stage) { return fBaskets[stage]; }
 
   /// Execute a given stage in scalar mode
-  void Execute_s(size_t stage) { fWorkSeq[stage].ExecuteLoop(fBaskets[stage]); fBaskets[stage].clear(); }
+  void Execute_s(size_t stage) { Base_t::fWorkSeq[stage]->ExecuteLoop(fBaskets[stage]); fBaskets[stage].clear(); }
 
   /// Execute the full sequence once in scalar mode
   void Execute_s() { for (size_t stage = 0; stage < NSeq; ++stage) Execute_s(stage); }
 
   /// Execute a given stage in vector mode
-  void Execute_v(size_t stage) { fWorkSeq[stage].Execute(fBasket[stage]); fBaskets[stage].clear(); }
+  void Execute_v(size_t stage) { Base_t::fWorkSeq[stage]->Execute(fBaskets[stage]); fBaskets[stage].clear(); }
   
   /// Execute all stages in vector mode
   void Execute_v() { for (size_t stage = 0; stage < NSeq; ++stage) Execute_v(stage); }
@@ -59,8 +69,8 @@ public:
   void Execute()
   {
     for (size_t stage = 0; stage < NSeq; ++stage) {
-      if (fVectorMode[stage]) Execute_v(stage);
-      else                    Execute_s(stage);
+      if (Base_t::fVectorMode[stage]) Execute_v(stage);
+      else                            Execute_s(stage);
     }
   }
 

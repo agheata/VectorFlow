@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <array>
-#include <vectorFlow/Work.h>
+#include <vectorFlow/Flow.h>
 
 namespace vectorflow {
 
@@ -25,11 +25,12 @@ namespace vectorflow {
    but not std::array)
 */
 template <typename Data, typename DataContainer, std::size_t NSeq>
-class PipelineFlow() : public Flow<Data, DataContainer, NSeq>
+class PipelineFlow : public Flow<Data, DataContainer, NSeq>
 {
-  using size_t = std::size_t;
-  using Work_t = Work<Data, DataContainer>;
-  using WorkSeq_t = std::array<Work, NSeq>;
+  using Base_t = Flow<Data, DataContainer, NSeq>;
+  using typename Base_t::size_t;
+  using typename Base_t::Work_t;
+  using typename Base_t::WorkSeq_t;
 
 private:
   DataContainer fBasket;               ///< The container for input data
@@ -38,7 +39,7 @@ public:
   virtual ~PipelineFlow() {}
 
   /// Add data to a given stage
-  void AddData(Data *data) { fBaskets.push_back(data); }
+  void AddData(Data *data) { fBasket.push_back(data); }
   void AddData(DataContainer const &vdata)
   {
     std::copy(vdata.begin(), vdata.end(), std::back_inserter(fBasket));
@@ -48,17 +49,17 @@ public:
   void Clear() { fBasket.clear(); }
 
   /// Getters for input data
-  size_t GetNinput() const { return fBasket.size(); }
+  size_t GetNstates() const { return fBasket.size(); }
   DataContainer &InputData() { return fBasket; }
 
   /// Execute a given stage in scalar mode
-  void Execute_s(size_t stage) { fWorkSeq[stage].ExecuteLoop(fBasket); }
+  void Execute_s(size_t stage) { Base_t::fWorkSeq[stage]->ExecuteLoop(fBasket); }
 
   /// Execute the full pipeline in scalar mode
   void Execute_s() { for (size_t stage = 0; stage < NSeq; ++stage) Execute_s(stage); }
 
   /// Execute a given stage in vector mode
-  void Execute_v(size_t stage) { fWorkSeq[stage].Execute(fBasket); }
+  void Execute_v(size_t stage) { Base_t::fWorkSeq[stage]->Execute(fBasket); }
   
   /// Execute all stages in vector mode
   void Execute_v() { for (size_t stage = 0; stage < NSeq; ++stage) Execute_v(stage); }
@@ -67,8 +68,8 @@ public:
   void Execute()
   {
     for (size_t stage = 0; stage < NSeq; ++stage) {
-      if (fVectorMode[stage]) Execute_v(stage);
-      else                    Execute_s(stage);
+      if (Base_t::fVectorMode[stage]) Execute_v(stage);
+      else                            Execute_s(stage);
     }
   }
 
