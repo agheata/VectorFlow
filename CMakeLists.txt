@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.6.0)
 
 include(cmake/RecordCmdLine.cmake)
 
-option(BUILD_TESTING    "Build test binaries and create test target"  ON)
+option(BUILD_TESTING  "Build test binaries and create test target"  ON)
 option(BUILD_EXAMPLES "Build binaries for performance benchmarking" ON)
+option(ROOT "Include ROOT" OFF)
 set(VecCore_VERSION 0.5.0)
 
 if(BUILD_TESTING)
@@ -16,7 +17,19 @@ project(VectorFlow VERSION 0.1.0)
 add_library(VectorFlow INTERFACE)
 target_include_directories(VectorFlow INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
 
-#Find VecCore with correct backend
+# Added due to VecGeom dependency with ROOT
+if ( ROOT )
+find_package(ROOT)
+  # Added the following IF statement to NOT force ROOT package to be required
+  if ( ROOT_FOUND )
+    message(STATUS "ROOT dir found: ${ROOT_INCLUDE_DIRS}")
+    message(STATUS "ROOT libraries: ${ROOT_LIBRARIES}")
+    include_directories(${ROOT_INCLUDE_DIRS})
+    target_link_libraries(VectorFlow INTERFACE ${ROOT_LIBRARIES})
+  endif ( ROOT_FOUND )
+endif ( ROOT )
+
+# Find VecCore with correct backend
 find_package(VecCore ${VecCore_VERSION} REQUIRED COMPONENTS ${VecCore_BACKEND})
 target_link_libraries(VectorFlow INTERFACE VecCore::VecCore)
 
