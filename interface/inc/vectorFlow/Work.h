@@ -5,13 +5,13 @@ namespace vectorflow {
 
 /// Base class for generic work aware of the execution mode: scalar or vector.
 /** Must be constructed with a scalar data type and a container type for pointers of this data, e.g:
-      Work<Track*, std::vector<Track*>>
+      Work<Track, std::vector<Track*>>
   The work may optionally dispatch the input state to a follow0up work task, via a DataContainer. To do this,
   one should first register the input containers of the client tasks, then call the Dispatch method to the 
   appropriate one from the implementation of the Execute methods.
 */
 template <typename Data, typename DataContainer>
-struct Work()
+struct Work
 {
   using DataPtr_t     = Data*;
   using ClientsList_t = std::vector<DataContainer*>;
@@ -21,7 +21,7 @@ struct Work()
   virtual ~Work() {};
 
   /// Add a container of a client work task
-  void         AddClient(DataContainer *client) { fClients->push_back(client); }
+  void         AddClient(DataContainer *client) { fClients.push_back(client); }
 
   /// Dispatch current state to a client work task input
   void         Dispatch(DataPtr_t state, size_t client) { fClients[client]->push_back(state); }

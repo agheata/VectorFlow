@@ -226,8 +226,8 @@ private:
 
   // ---------------------------------------------------------------
   // Compilation constants
-  static constexpr bool partDebug = false;                 // Enforce debugging output
-  static constexpr int ncompSVEC  = FieldTrack::NumCompFT; // expect 6, later 8, eventually up to 12
+  const bool partDebug = false;                 // Enforce debugging output
+  const int ncompSVEC  = FieldTrack::NumCompFT; // expect 6, later 8, eventually up to 12
   const bool useOneStep           = true;                  //  Algorithm selection - false for KeepStepping
 
   // ---------------------------------------------------------------
@@ -235,7 +235,7 @@ private:
 
   double fMinimumStep; // same
   // Minimum Step allowed in a Step (in absolute units)
-  static constexpr double fSmallestFraction = 1.0e-7; // Expected value: larger than 1e-12 to 5e-15;
+  const double fSmallestFraction = 1.0e-7; // Expected value: larger than 1e-12 to 5e-15;
   // Smallest fraction of (existing) curve length - in relative units
   //  below this fraction the current step will be the last
 
@@ -244,11 +244,11 @@ private:
   const int fNoVars;    // Full number of variable
 
   unsigned long fMaxNoSteps;
-  static constexpr int fMaxStepBase = 250;
+  const int fMaxStepBase = 250;
 
-  static constexpr double kSafetyFactor = 0.9;                                            //     OK ...
-  static constexpr double kPowerShrink  = -1.0 / T_Stepper::GetIntegratorOrder();         //  exponent for shrinking
-  static constexpr double kPowerGrow    = -1.0 / (1.0 + T_Stepper::GetIntegratorOrder()); //  exponent for growth
+  const double kSafetyFactor = 0.9;                                            //     OK ...
+  const double kPowerShrink  = -1.0 / T_Stepper::GetIntegratorOrder();         //  exponent for shrinking
+  const double kPowerGrow    = -1.0 / (1.0 + T_Stepper::GetIntegratorOrder()); //  exponent for growth
   /*const*/ double fErrcon;
   // Parameters used to grow and shrink trial stepsize.
 
@@ -857,7 +857,7 @@ void SimpleIntegrationDriver<T_Stepper, Nvar>::OneGoodStep(const Real_v yStart[]
   // Check against fErrcon to avoid calling power ... saves work if any are 'over' max
   // fErrcon is 'const', cache them here to avoid memory contention (which leads to a lack of scalability)
   static const Real_v kErrCon2_v     = fErrcon * fErrcon;
-  static constexpr auto tPowerGrow_s = .5 * kPowerGrow;
+  const auto tPowerGrow_s = .5 * kPowerGrow;
   Bool_v underThresh                 = errmax_sq <= kErrCon2_v;
   Real_v errStretch                  = kSafetyFactor_v * PowerIf(errmax_sq, tPowerGrow_s, !underThresh);
   // Note:  lanes with 'false' argument (i.e. underThresh=true) will have value 1.0
