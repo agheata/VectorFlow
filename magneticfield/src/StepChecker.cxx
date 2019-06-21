@@ -60,7 +60,7 @@ bool StepChecker::CheckStep(vecgeom::Vector3D<double> const &Position, vecgeom::
   ThreeVector DirectionNewHelix(0., 0., 0.);
 #if 1
   // Simpler version
-  geant::ConstFieldHelixStepper stepper(BfieldVec[0], BfieldVec[1], BfieldVec[2]);
+  ConstFieldHelixStepper stepper(BfieldVec[0], BfieldVec[1], BfieldVec[2]);
   stepper.DoStep<double>(Position, Direction, charge, momentum, step, PositionNewHelix, DirectionNewHelix);
 #else
   // More complicated version ...

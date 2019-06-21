@@ -15,8 +15,6 @@
 #include <Geant/Config.h>
 #include <vectorFlow/VectorTypes.h>
 
-namespace geant {
-inline namespace GEANT_IMPL_NAMESPACE {
 /**
  * A very simple stepper treating the propagation of particles in a constant Bz magnetic field
  * ( neglecting energy loss of particle )
@@ -433,8 +431,5 @@ GEANT_FORCE_INLINE void ConstFieldHelixStepper::PrintStep(vecgeom::Vector3D<Real
            Get(dy, i), Get(dz, i));
   }
 }
-
-} // namespace GEANT_IMPL_NAMESPACE
-} // namespace geant
 
 #endif /* CONSTVECFIELDHELIXSTEPPER_H_ */
