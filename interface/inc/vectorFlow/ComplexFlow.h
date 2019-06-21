@@ -46,7 +46,7 @@ public:
   size_t GetNstates() const
   { 
     size_t nstates = 0;
-    for (auto basket : fBaskets)
+    for (auto &basket : fBaskets)
       nstates += basket.size();
     return nstates;
   }
