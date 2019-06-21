@@ -21,13 +21,13 @@ struct Work
   virtual ~Work() {};
 
   /// Add a container of a client work task
-  void         AddClient(DataContainer *client) { fClients.push_back(client); }
+  inline void  AddClient(DataContainer *client) { fClients.push_back(client); }
 
   /// Dispatch current state to a client work task input
-  void         Dispatch(DataPtr_t state, size_t client) { fClients[client]->push_back(state); }
+  inline void  Dispatch(DataPtr_t state, size_t client) { fClients[client]->push_back(state); }
 
   /// Dispatch all the input states to a client
-  void         DispatchAll(DataContainer const &input, size_t client)
+  inline void  DispatchAll(DataContainer const &input, size_t client)
   {
     std::copy(input.begin(), input.end(), std::back_inserter(*fClients[client]));
   }
@@ -35,7 +35,7 @@ struct Work
   virtual void Execute(DataPtr_t)             = 0;
   virtual void Execute(DataContainer const &) = 0;
 
-  void ExecuteLoop(DataContainer const &input) { for ( DataPtr_t dataptr : input) Execute(dataptr); }
+  inline void ExecuteLoop(DataContainer const &input) { for ( DataPtr_t dataptr : input) Execute(dataptr); }
 };
 } // namespace vectorflow
 #endif
