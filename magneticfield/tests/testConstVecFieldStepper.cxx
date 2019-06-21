@@ -169,7 +169,7 @@ int main(int argc, char *args[])
     BfieldKG[ix] *= TeslaToKiloGauss;
   }
 
-  geant::ConstFieldHelixStepper helixStepper(BfieldKG); // double Bfield[3] );
+  ConstFieldHelixStepper helixStepper(BfieldKG); // double Bfield[3] );
 
   // Initialising coordinates
   const double mmGVf = geant::units::millimeter;

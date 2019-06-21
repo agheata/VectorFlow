@@ -9,13 +9,15 @@ include_directories(
   inc
   ${CMAKE_SOURCE_DIR}/base/inc
   ${CMAKE_SOURCE_DIR}/examples/trackML/inc
-)  
+  ${CMAKE_SOURCE_DIR}/event/inc
+  ${CMAKE_SOURCE_DIR}/magneticfield/inc
+)
 
 #----------------------------------------------------------------------------------------------
 # Add the library
 #
 add_library(TrackML SHARED ${sources} )
-target_link_libraries(TrackML -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${VECGEOM_LIBRARIES})
+target_link_libraries(TrackML VFevent Vmagfield -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${VECGEOM_LIBRARIES})
 
 #----------------------------------------------------------------------------------------------
 # Install the files
