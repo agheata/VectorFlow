@@ -1,14 +1,14 @@
-/// -------------------------------------------------------------------------------------+
-/// VectorFlow unit test. Generation + Propagation.                                      |
-///                                                                                      |
-/// This test is intended to show the usage of the PipelineFlow interface of VectorFlow. |
-/// The example propagates charged particles in a constant field in several steps,       |
-/// until they reach a sphere with a given radius centered in the event vertex.          |
-///                                                                                      |
-/// The pipeline flow has only one task (TaskPropagator) and the data type to be used    |
-/// are the events that are generated in the event-loop.                                 |
-/// After each execution, the pipeline is cleared and the next event is processed.       |
-/// -------------------------------------------------------------------------------------+
+/// +--------------------------------------------------------------------------------------+
+/// | VectorFlow unit test. Generation + Propagation.                                      |
+/// |                                                                                      |
+/// | This test is intended to show the usage of the PipelineFlow interface of VectorFlow. |
+/// | The example propagates charged particles in a constant field in several steps,       |
+/// | until they reach a sphere with a given radius centered in the event vertex.          |
+/// |                                                                                      |
+/// | The pipeline flow has only one task (TaskPropagator) and the data type to be used    |
+/// | are the tracks that are generated in each even of the event-loop.                    |
+/// | After each execution, the pipeline is cleared and the next tracks are processed.     |
+/// +--------------------------------------------------------------------------------------+
 
 #include <iostream>
 #include <string>
@@ -24,41 +24,28 @@
 #include "SimpleStepper.h"
 
 using namespace vectorflow;
-using Event_t = CocktailGenerator::Event_t;
 
-struct TaskPropagator : public Work<Event_t, std::vector<Event_t*>> {
+//struct TaskPropagator : public Work<Event_t, std::vector<Event_t*>> {
+struct TaskPropagator : public Work<Track, std::vector<Track*>> {
   // Propagator task needs a stepper
-  trackml::SimpleStepper* stepper;
-
-  // Propagate function
-  void PropagateTracks(Event_t* event) {
-    std::cout << "\n=== Propagating event " << event->GetEvent() << ":\n";
-
-    // Propagate all charged tracks to the boundary of a sphere of radius 20cm
-    constexpr double radius = 20. * geant::units::cm;
-
-    for (auto i = 0; i < event->GetNprimaries(); i++) {
-      vectorflow::Track* track = event->GetPrimary(i);
-      if (track->Charge() != 0) {
-        stepper->PropagateToR(radius, *track);
-        std::cout << "Track " << i << " made " << track->GetNsteps() << " steps. ";
-        std::cout << "Exit position: " << track->Position() << "\n";
-      }
-    }
-  } 
+  trackml::SimpleStepper* fStepper;
 
   // Scalar mode executor
-  void Execute(Event_t* event) {
-    PropagateTracks(event);
+  void Execute(Track* track) {
+    // Propagate track to the boundary of a sphere of radius 20cm
+    constexpr double radius = 20. * geant::units::cm;
+    fStepper->PropagateToR(radius, *track); 
+    std::cout << "Track " << track->Event() << " made " << track->GetNsteps() << " steps. ";
+    std::cout << "Exit position: " << track->Position() << "\n";
   }
 
   // Vector mode executor
-  void Execute(std::vector<Event_t*> const &events) {
-    std::cout << "TaskPropagator::Execute not implemented for vector mode\n";
+  void Execute(std::vector<Track*> const &tracks) {
+    std::cout << "TaskPropagator::Execute not implemented for vector mode.\n";
   }
 
   // Struct constructor
-  TaskPropagator(trackml::SimpleStepper* stpr) : stepper(stpr) {}
+  TaskPropagator(trackml::SimpleStepper* stepper) : fStepper(stepper) {}
 };
 
 int main(int argc, char* argv[]) {
@@ -83,7 +70,7 @@ int main(int argc, char* argv[]) {
 
   // Check if generator parameters are correct
   if (!cocktailGen.InitPrimaryGenerator()) {
-    std::cout << "Failed to pass init check\n";
+    std::cout << "Failed to pass init check.\n";
     exit(-1);
   }
 
@@ -93,7 +80,7 @@ int main(int argc, char* argv[]) {
   trackml::SimpleStepper*   stepper    = new trackml::SimpleStepper(propagator);
 
   // Create a pipeline flow with one stage
-  PipelineFlow<Event_t, std::vector<Event_t*>, 1> plFlow;
+  PipelineFlow<Track, std::vector<Track*>, 1> plFlow;
 
   // Create and initialize the propagator task
   TaskPropagator tPropagate(stepper);
@@ -104,11 +91,16 @@ int main(int argc, char* argv[]) {
 
   // Event loop
   for (auto i = 0; i < nEvents; i++) {
-    Event_t* event = cocktailGen.NextEvent();
+    CocktailGenerator::Event_t* event = cocktailGen.NextEvent();
     event->SetEvent(i);
 
     // Add data to the flow
-    plFlow.AddData(event);
+    std::cout << "\n=== Propagating event " << i << "\n";
+    for (auto j = 0; j < event->GetNprimaries(); j++) {
+      Track* track = event->GetPrimary(j);
+      // Only charged tracks will be added
+      if (track->Charge() != 0) plFlow.AddData(track);
+    }
 
     // Process the flow
     plFlow.Execute();
