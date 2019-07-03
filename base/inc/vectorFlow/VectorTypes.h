@@ -3,6 +3,7 @@
 
 #include <base/Global.h>
 #include <base/Vector3D.h>
+#include <VecCore/SIMD.h>
 
 namespace vectorflow {
 
@@ -23,6 +24,8 @@ const int kVecLenD = vecCore::VectorSize<Double_v>();
 
 const auto kVecAlignD = sizeof(Double_v);
 const auto kVecAlignF = sizeof(Float_v);
+
+constexpr int kVecAlignment = VECCORE_SIMD_ALIGN;
 
 inline
 void CopyFltToDbl(Float_v const &flt_v, Double_v &dbl1_v, Double_v &dbl2_v)
