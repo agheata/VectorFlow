@@ -18,9 +18,13 @@ add_executable(testTrackPropagationPipeLine testTrackPropagationPipeLine.cxx)
 target_link_libraries(testTrackPropagationPipeLine TrackML VFevent Vmagfield -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${VECGEOM_LIBRARIES})
 message(STATUS "Created target for testTrackPropagationPipeLine")
 
+add_executable(testVectorTypesTrackPropagationPipeLine testVectorTypesTrackPropagationPipeLine.cxx)
+target_link_libraries(testVectorTypesTrackPropagationPipeLine TrackML VFevent Vmagfield -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${VECGEOM_LIBRARIES})
+message(STATUS "Created target for testVectorTypesTrackPropagationPipeLine")
+
 #----------------------------------------------------------------------------------------------
 # Install the files
 #
 install(TARGETS testInterfaces DESTINATION bin/tests)
-
 install(TARGETS testTrackPropagationPipeLine DESTINATION bin/tests)
+install(TARGETS testVectorTypesTrackPropagationPipeLine DESTINATION bin/tests)
