@@ -37,7 +37,7 @@ struct SIMDTracks {
   // Data in vecCore vector types
   Double_v fPosX_v   , fPosY_v    , fPosZ_v   ;
   Double_v fDirX_v   , fDirY_v    , fDirZ_v   ;
-  Double_v fCharge_v , fMomentum_v, fStep_v   ;
+  Double_v fCharge_v , fMomentum_v, fNSteps_v ;
   Double_v fNewPosX_v, fNewPosY_v , fNewPosZ_v;
   Double_v fNewDirX_v, fNewDirY_v , fNewDirZ_v;
 
@@ -51,13 +51,18 @@ struct SIMDTracks {
     Set(fDirZ_v    , lane, track->Direction().z());
     Set(fCharge_v  , lane, track->Charge());
     Set(fMomentum_v, lane, track->P());
-    Set(fStep_v    , lane, track->GetStep());
+    Set(fNSteps_v  , lane, 0);
   }
 
   // Scatter one lane info back to original structure
   void Scatter(Data* track, std::size_t lane) {
-    track->SetPosition(static_cast<Scalar<Double_v>>(Get(fNewPosX_v, lane)), static_cast<Scalar<Double_v>>(Get(fNewPosY_v, lane)), static_cast<Scalar<Double_v>>(Get(fNewPosZ_v, lane)));
-    track->SetDirection(static_cast<Scalar<Double_v>>(Get(fNewDirX_v, lane)), static_cast<Scalar<Double_v>>(Get(fNewDirY_v, lane)), static_cast<Scalar<Double_v>>(Get(fNewDirZ_v, lane)));
+    track->SetPosition(static_cast<Scalar<Double_v>>(Get(fNewPosX_v, lane)),
+        static_cast<Scalar<Double_v>>(Get(fNewPosY_v, lane)),
+        static_cast<Scalar<Double_v>>(Get(fNewPosZ_v, lane)));
+    track->SetDirection(static_cast<Scalar<Double_v>>(Get(fNewDirX_v, lane)),
+        static_cast<Scalar<Double_v>>(Get(fNewDirY_v, lane)),
+        static_cast<Scalar<Double_v>>(Get(fNewDirZ_v, lane)));
+    track->SetNsteps(static_cast<Scalar<Double_v>>(Get(fNSteps_v, lane)));
   }
 };
 
@@ -76,9 +81,9 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
   }
 
   // function to check whether all lanes can still be propagated or not
-  bool AllLanesCanDoStep(double* cvalues, const std::size_t& kVectorSize) {
-    for (auto i = 0; i < kVectorSize; i++) 
-      if (cvalues[i] >= 0.) return false;
+  bool AllLanesCanDoStep(Double_v c_v, const std::size_t& kVectorSize) {
+    for (auto i = 0; i < kVectorSize; i++)
+      if (static_cast<Scalar<Double_v>>(Get(c_v, i)) >= 0.) return false;
     return true;
   }
 
@@ -93,90 +98,90 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
         Execute(tracks[i]);
       return;
     }
-
-    double cvalues[kVectorSize];   // Auxiliar array to check if the track in the lane is fully propagated
-    std::size_t lane[kVectorSize]; // Auxiliar array to check which track is executing in which lane
-    std::size_t nextTrack = 0;     // Auxiliar counter to keep record of which track will be dispatched 
+    
+    std::size_t lane[kVectorSize]; // Array to check which track is executing in which lane
+    std::size_t nextTrack = 0;     // Counter to keep record of which track will be dispatched 
 
     // Declare constants and auxiliar variables
     const double epsilon     = 1.E-4 * geant::units::mm;
     const double toKiloGauss = 1.0   / geant::units::kilogauss;
 
-    vecgeom::Vector3D<double> pos;
-    vecgeom::Vector3D<double> dir;
+    vecgeom::Vector3D<Double_v> pos_v;
+    vecgeom::Vector3D<Double_v> dir_v;
     vecgeom::Vector3D<double> const bfield = fPropagator->GetBfield();
     const double radius2 = radius * radius;
-    double rad2, c, safety, dmax, pDotV, d2, snext, step_geom, step_field, step;
+    Double_v rad2_v, c_v, safety_v, dmax_v, pDotV_v, d2_v, snext_v,
+             step_geom_v, step_field_v, step_v;
 
-    // Set up the first lanes 
+    // Set up first lanes
     for (auto i = 0; i < kVectorSize; i++) {
-      lane[i]    = i;
-      pos        = tracks[i]->Position();
-      dir        = tracks[i]->Direction();
-      rad2       = pos.Mag2();
-      c          = rad2 - radius2;
-      cvalues[i] = c;
-      nextTrack++;
+      lane[i] = i;
+      fSIMDStruct.Gather(tracks[i], i);
     }
+    nextTrack += kVectorSize;
+
+    pos_v.Set(fSIMDStruct.fPosX_v, fSIMDStruct.fPosY_v, fSIMDStruct.fPosZ_v);
+    dir_v.Set(fSIMDStruct.fDirX_v, fSIMDStruct.fDirY_v, fSIMDStruct.fDirZ_v);
+
+    rad2_v = pos_v.Mag2();
+    c_v    = rad2_v - radius2;
 
     // Execute in vector mode until there are no more tracks to dispatch
-    // or all lanes in SIMD struct can still be propagated
-    while (nextTrack < kTracksSize || AllLanesCanDoStep(cvalues, kVectorSize)) {
-      // Calculate track step
+    // or all lanes in SIMD struct can still do at least one more step
+    while (nextTrack < kTracksSize || AllLanesCanDoStep(c_v, kVectorSize)) {
+      // Assign new track to a lane
       for (auto i = 0; i < kVectorSize; i++) {
-        // cvalues[i] = c >= 0 means fully propagation
-        if (cvalues[i] >= 0. && nextTrack < kTracksSize) { 
-          // Assign new track to a lane 
-          lane[i]    = nextTrack;
-          pos        = tracks[nextTrack]->Position();
-          dir        = tracks[nextTrack]->Direction();
-          rad2       = pos.Mag2();
-          c          = rad2 - radius2;
-          cvalues[i] = c;
+        if (static_cast<Scalar<Double_v>>(Get(c_v, i)) >= 0. && nextTrack < kTracksSize) {
+          // Scatter back the propagated track
+          fSIMDStruct.Scatter(tracks[lane[i]], i);
+
+          // Set values for new track in its corresponding lane
+          lane[i] = nextTrack;
+          Set(pos_v.x(), i, tracks[nextTrack]->Position().x());
+          Set(pos_v.y(), i, tracks[nextTrack]->Position().y());
+          Set(pos_v.z(), i, tracks[nextTrack]->Position().z());
+          Set(dir_v.x(), i, tracks[nextTrack]->Direction().x());
+          Set(dir_v.y(), i, tracks[nextTrack]->Direction().y());
+          Set(dir_v.z(), i, tracks[nextTrack]->Direction().z());
+          Set(c_v, i, tracks[nextTrack]->Position().Mag2() - radius2);
+
+          // Gather rest of track info
+          // However, it also copies unusued data like fPos's and fDir's
+          // At this point, there is room for optimization since the only
+          // data required here will be the charge, momentum, and steps
+          fSIMDStruct.Gather(tracks[nextTrack], i);
           nextTrack++;
         }
-        safety = radius - vecCore::math::Sqrt(rad2);
-        dmax   = 8. * epsilon / tracks[lane[i]]->Curvature(bfield.z() * toKiloGauss);
-        pDotV  = pos.Dot(dir);
-        d2     = pDotV * pDotV - cvalues[i];
-        snext  = -pDotV + vecCore::math::Sqrt(vecCore::math::Abs(d2));
-        
-        tracks[lane[i]]->SetSafety(safety);
-        tracks[lane[i]]->SetSnext(snext);
-        
-        step_geom  = vecCore::math::Max(epsilon, snext);
-        step_field = vecCore::math::Max(dmax, safety);
-        step       = vecCore::math::Min(step_geom, step_field);
-        
-        tracks[lane[i]]->SetStep(step);
-
-        // Gather info into SIMD struct
-        fSIMDStruct.Gather(tracks[lane[i]], i);
       }
+      safety_v = radius - vecCore::math::Sqrt(rad2_v);
+      // Get curvature for each lane
+      for (auto i = 0; i < kVectorSize; i++) Set(dmax_v, i, 8. * epsilon /
+          tracks[lane[i]]->Curvature(bfield.z() * toKiloGauss));
+      pDotV_v = pos_v.Dot(dir_v);
+      d2_v    = pDotV_v * pDotV_v - c_v;
+      snext_v = -pDotV_v + vecCore::math::Sqrt(vecCore::math::Abs(d2_v));
 
-      fHelixStepper->DoStep<Double_v>(fSIMDStruct.fPosX_v, fSIMDStruct.fPosY_v, fSIMDStruct.fPosZ_v, fSIMDStruct.fDirX_v, fSIMDStruct.fDirY_v, fSIMDStruct.fDirZ_v, fSIMDStruct.fCharge_v, fSIMDStruct.fMomentum_v, fSIMDStruct.fStep_v, fSIMDStruct.fNewPosX_v, fSIMDStruct.fNewPosY_v, fSIMDStruct.fNewPosZ_v, fSIMDStruct.fNewDirX_v, fSIMDStruct.fNewDirY_v, fSIMDStruct.fNewDirZ_v);
+      Double_v epsilon_v = epsilon;
+      step_geom_v  = vecCore::math::Max(epsilon_v, snext_v);
+      step_field_v = vecCore::math::Max(dmax_v, safety_v);
+      step_v       = vecCore::math::Min(step_geom_v, step_field_v);
 
-      // Update tracks state and auxiliar variables
-      for (auto i = 0; i < kVectorSize; i++) {
-        // Scatter back info into original structure
-        fSIMDStruct.Scatter(tracks[lane[i]], i);
+      fHelixStepper->DoStep<Double_v>(pos_v.x(), pos_v.y(), pos_v.z(),
+          dir_v.x(), dir_v.y(), dir_v.z(), fSIMDStruct.fCharge_v,
+          fSIMDStruct.fMomentum_v, step_v, fSIMDStruct.fNewPosX_v,
+          fSIMDStruct.fNewPosY_v, fSIMDStruct.fNewPosZ_v,
+          fSIMDStruct.fNewDirX_v, fSIMDStruct.fNewDirY_v,
+          fSIMDStruct.fNewDirZ_v);
 
-        tracks[lane[i]]->DecreasePstep(tracks[lane[i]]->GetStep());
-        tracks[lane[i]]->DecreaseSnext(tracks[lane[i]]->GetStep());
-        tracks[lane[i]]->DecreaseSafety(tracks[lane[i]]->GetStep());
-        tracks[lane[i]]->IncreaseStep(tracks[lane[i]]->GetStep());
-        tracks[lane[i]]->IncrementNsteps();
-        
-        pos = tracks[lane[i]]->Position();
-        dir = tracks[lane[i]]->Direction();
+      pos_v.Set(fSIMDStruct.fNewPosX_v, fSIMDStruct.fNewPosY_v, fSIMDStruct.fNewPosZ_v);
+      dir_v.Set(fSIMDStruct.fNewDirX_v, fSIMDStruct.fNewDirY_v, fSIMDStruct.fNewDirZ_v);
+      
+      assert(dir_v.IsNormalized() && "ERROR: Direction not normalized after field propagation");
 
-        // Check direction is normalized
-        assert(dir.IsNormalized() && "ERROR: Direction not normalized after field propagation");
+      rad2_v = pos_v.Mag2();
+      c_v    = rad2_v - radius2;
 
-        rad2       = pos.Mag2();
-        c          = rad2 - radius2;
-        cvalues[i] = rad2 - radius2;
-      }
+      fSIMDStruct.fNSteps_v += 1;
     }
 
     // Execute remaining tracks in scalar mode
@@ -198,7 +203,10 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
   }
 
   // Task struct constructor
-  TaskPropagator(trackml::HelixPropagator* propagator, trackml::SimpleStepper* stepper, ConstFieldHelixStepper* helixstepper, SIMDTracks<Track> simd) : fPropagator(propagator), fStepper(stepper), fHelixStepper(helixstepper), fSIMDStruct(simd) {}
+  TaskPropagator(trackml::HelixPropagator* propagator, trackml::SimpleStepper*
+      stepper, ConstFieldHelixStepper* helixstepper, SIMDTracks<Track> simd) :
+    fPropagator(propagator), fStepper(stepper), fHelixStepper(helixstepper),
+    fSIMDStruct(simd) {}
 };
 
 int main(int argc, char* argv[]) {
