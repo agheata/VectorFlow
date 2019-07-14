@@ -12,6 +12,7 @@
 
 #include <iostream>
 #include <vector>
+#include <cassert>
 #include <vectorFlow/PipelineFlow.h>
 #include <vecCore/vecCore>
 #include "CocktailGenerator.h"
@@ -33,36 +34,45 @@ using vecCore::Store;
 using vecCore::Scalar;
 
 template <typename Data>
-struct SIMDTracks {
+struct Tracks_v {
   // Data in vecCore vector types
-  Double_v fPosX_v   , fPosY_v    , fPosZ_v   ;
-  Double_v fDirX_v   , fDirY_v    , fDirZ_v   ;
+  vecgeom::Vector3D<Double_v> fPos_v;
+  vecgeom::Vector3D<Double_v> fDir_v;
   Double_v fCharge_v , fMomentum_v, fNSteps_v ;
-  Double_v fNewPosX_v, fNewPosY_v , fNewPosZ_v;
-  Double_v fNewDirX_v, fNewDirY_v , fNewDirZ_v;
+
+  // Auxiliar vectorized methods
+  Double_v Pt_v() const { return fMomentum_v * fDir_v.Perp(); }
+
+  Double_v Curvature_v(double Bz) { 
+    Double_v qB_v = fCharge_v * Bz; 
+    Double_v curvature_v = vecCore::math::Abs(Track::kB2C * qB_v / (Pt_v() +
+          Track::kTiny)); 
+    return vecCore::Blend<Double_v>(vecCore::math::Abs(qB_v) < Track::kTiny,
+        Track::kTiny, curvature_v);
+  }
 
   // Gather info to fill one SIMD lane
-  void Gather(Data* track, std::size_t lane) {
-    Set(fPosX_v    , lane, track->Position().x());
-    Set(fPosY_v    , lane, track->Position().y());
-    Set(fPosZ_v    , lane, track->Position().z());
-    Set(fDirX_v    , lane, track->Direction().x());
-    Set(fDirY_v    , lane, track->Direction().y());
-    Set(fDirZ_v    , lane, track->Direction().z());
+  void Gather(Data* track, const std::size_t lane) {
+    Set(fPos_v.x() , lane, track->Position().x());
+    Set(fPos_v.y() , lane, track->Position().y());
+    Set(fPos_v.z() , lane, track->Position().z());
+    Set(fDir_v.x() , lane, track->Direction().x());
+    Set(fDir_v.y() , lane, track->Direction().y());
+    Set(fDir_v.z() , lane, track->Direction().z());
     Set(fCharge_v  , lane, track->Charge());
     Set(fMomentum_v, lane, track->P());
     Set(fNSteps_v  , lane, 0);
   }
 
   // Scatter one lane info back to original structure
-  void Scatter(Data* track, std::size_t lane) {
-    track->SetPosition(static_cast<Scalar<Double_v>>(Get(fNewPosX_v, lane)),
-        static_cast<Scalar<Double_v>>(Get(fNewPosY_v, lane)),
-        static_cast<Scalar<Double_v>>(Get(fNewPosZ_v, lane)));
-    track->SetDirection(static_cast<Scalar<Double_v>>(Get(fNewDirX_v, lane)),
-        static_cast<Scalar<Double_v>>(Get(fNewDirY_v, lane)),
-        static_cast<Scalar<Double_v>>(Get(fNewDirZ_v, lane)));
-    track->SetNsteps(static_cast<Scalar<Double_v>>(Get(fNSteps_v, lane)));
+  void Scatter(const std::size_t lane, Data* track) {
+    track->SetPosition(Get(fPos_v.x(), lane),
+        Get(fPos_v.y(), lane),
+        Get(fPos_v.z(), lane));
+    track->SetDirection(Get(fDir_v.x(), lane),
+        Get(fDir_v.y(), lane),
+        Get(fDir_v.z(), lane));
+    track->SetNsteps(Get(fNSteps_v, lane));
   }
 };
 
@@ -71,7 +81,7 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
   trackml::HelixPropagator* fPropagator;
   trackml::SimpleStepper*   fStepper;
   ConstFieldHelixStepper*   fHelixStepper;
-  SIMDTracks<Track> fSIMDStruct;
+  Tracks_v<Track> fTracks_v;
 
   // Scalar mode executor
   void Execute(Track* track) {
@@ -80,11 +90,9 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
     fStepper->PropagateToR(radius, *track); 
   }
 
-  // function to check whether all lanes can still be propagated or not
-  bool AllLanesCanDoStep(Double_v c_v, const std::size_t& kVectorSize) {
-    for (auto i = 0; i < kVectorSize; i++)
-      if (static_cast<Scalar<Double_v>>(Get(c_v, i)) >= 0.) return false;
-    return true;
+  // Function to check whether all lanes can still be propagated or not
+  bool AllLanesCanDoStep(const Double_v& c_v) {
+    return vecCore::MaskFull(c_v < 0);
   }
 
   // PropagateToR function for a vector of tracks
@@ -99,15 +107,13 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
       return;
     }
     
-    std::size_t lane[kVectorSize]; // Array to check which track is executing in which lane
-    std::size_t nextTrack = 0;     // Counter to keep record of which track will be dispatched 
+    std::size_t lane[kVectorSize]; // Array to check which track is which lane
+    std::size_t nextTrack = 0;     // Counter to dispatch tracks 
 
     // Declare constants and auxiliar variables
     const double epsilon     = 1.E-4 * geant::units::mm;
     const double toKiloGauss = 1.0   / geant::units::kilogauss;
 
-    vecgeom::Vector3D<Double_v> pos_v;
-    vecgeom::Vector3D<Double_v> dir_v;
     vecgeom::Vector3D<double> const bfield = fPropagator->GetBfield();
     const double radius2 = radius * radius;
     Double_v rad2_v, c_v, safety_v, dmax_v, pDotV_v, d2_v, snext_v,
@@ -116,78 +122,56 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
     // Set up first lanes
     for (auto i = 0; i < kVectorSize; i++) {
       lane[i] = i;
-      fSIMDStruct.Gather(tracks[i], i);
+      fTracks_v.Gather(tracks[i], i);
     }
     nextTrack += kVectorSize;
+    rad2_v     = fTracks_v.fPos_v.Mag2();
+    c_v        = rad2_v - radius2;
 
-    pos_v.Set(fSIMDStruct.fPosX_v, fSIMDStruct.fPosY_v, fSIMDStruct.fPosZ_v);
-    dir_v.Set(fSIMDStruct.fDirX_v, fSIMDStruct.fDirY_v, fSIMDStruct.fDirZ_v);
-
-    rad2_v = pos_v.Mag2();
-    c_v    = rad2_v - radius2;
-
-    // Execute in vector mode until there are no more tracks to dispatch
-    // or all lanes in SIMD struct can still do at least one more step
-    while (nextTrack < kTracksSize || AllLanesCanDoStep(c_v, kVectorSize)) {
-      // Assign new track to a lane
-      for (auto i = 0; i < kVectorSize; i++) {
-        if (static_cast<Scalar<Double_v>>(Get(c_v, i)) >= 0. && nextTrack < kTracksSize) {
-          // Scatter back the propagated track
-          fSIMDStruct.Scatter(tracks[lane[i]], i);
-
-          // Set values for new track in its corresponding lane
-          lane[i] = nextTrack;
-          Set(pos_v.x(), i, tracks[nextTrack]->Position().x());
-          Set(pos_v.y(), i, tracks[nextTrack]->Position().y());
-          Set(pos_v.z(), i, tracks[nextTrack]->Position().z());
-          Set(dir_v.x(), i, tracks[nextTrack]->Direction().x());
-          Set(dir_v.y(), i, tracks[nextTrack]->Direction().y());
-          Set(dir_v.z(), i, tracks[nextTrack]->Direction().z());
-          Set(c_v, i, tracks[nextTrack]->Position().Mag2() - radius2);
-
-          // Gather rest of track info
-          // However, it also copies unusued data like fPos's and fDir's
-          // At this point, there is room for optimization since the only
-          // data required here will be the charge, momentum, and steps
-          fSIMDStruct.Gather(tracks[nextTrack], i);
-          nextTrack++;
-        }
-      }
+    // Execute until all lanes can at least do one more step
+    while (AllLanesCanDoStep(c_v)) {      
       safety_v = radius - vecCore::math::Sqrt(rad2_v);
-      // Get curvature for each lane
-      for (auto i = 0; i < kVectorSize; i++) Set(dmax_v, i, 8. * epsilon /
-          tracks[lane[i]]->Curvature(bfield.z() * toKiloGauss));
-      pDotV_v = pos_v.Dot(dir_v);
-      d2_v    = pDotV_v * pDotV_v - c_v;
-      snext_v = -pDotV_v + vecCore::math::Sqrt(vecCore::math::Abs(d2_v));
+      dmax_v   = 8. * epsilon / fTracks_v.Curvature_v(bfield.z() * toKiloGauss);
+      pDotV_v  = fTracks_v.fPos_v.Dot(fTracks_v.fDir_v);
+      d2_v     = pDotV_v * pDotV_v - c_v;
+      snext_v  = -pDotV_v + vecCore::math::Sqrt(vecCore::math::Abs(d2_v));
 
-      Double_v epsilon_v = epsilon;
-      step_geom_v  = vecCore::math::Max(epsilon_v, snext_v);
+      step_geom_v  = vecCore::math::Max(static_cast<Double_v>(epsilon), snext_v);
       step_field_v = vecCore::math::Max(dmax_v, safety_v);
       step_v       = vecCore::math::Min(step_geom_v, step_field_v);
 
-      fHelixStepper->DoStep<Double_v>(pos_v.x(), pos_v.y(), pos_v.z(),
-          dir_v.x(), dir_v.y(), dir_v.z(), fSIMDStruct.fCharge_v,
-          fSIMDStruct.fMomentum_v, step_v, fSIMDStruct.fNewPosX_v,
-          fSIMDStruct.fNewPosY_v, fSIMDStruct.fNewPosZ_v,
-          fSIMDStruct.fNewDirX_v, fSIMDStruct.fNewDirY_v,
-          fSIMDStruct.fNewDirZ_v);
-
-      pos_v.Set(fSIMDStruct.fNewPosX_v, fSIMDStruct.fNewPosY_v, fSIMDStruct.fNewPosZ_v);
-      dir_v.Set(fSIMDStruct.fNewDirX_v, fSIMDStruct.fNewDirY_v, fSIMDStruct.fNewDirZ_v);
+      fHelixStepper->DoStep<Double_v>(fTracks_v.fPos_v, fTracks_v.fDir_v,
+          fTracks_v.fCharge_v, fTracks_v.fMomentum_v, step_v, fTracks_v.fPos_v,
+          fTracks_v.fDir_v);
       
-      assert(dir_v.IsNormalized() && "ERROR: Direction not normalized after field propagation");
+      assert(fTracks_v.fDir_v.IsNormalized() && 
+          "ERROR: Direction not normalized after field propagation");
 
-      rad2_v = pos_v.Mag2();
+      rad2_v = fTracks_v.fPos_v.Mag2();
       c_v    = rad2_v - radius2;
 
-      fSIMDStruct.fNSteps_v += 1;
+      fTracks_v.fNSteps_v += 1;
+
+      // Assign new track to a lane if previous was fully propagated
+      if (!AllLanesCanDoStep(c_v)) {
+        for (auto i = 0; i < kVectorSize; i++) {
+          if (Get(c_v, i) >= 0 && nextTrack < kTracksSize) {
+            // Scatter back the propagated track
+            fTracks_v.Scatter(i, tracks[lane[i]]);
+
+            // Set values for new track in its corresponding lane
+            fTracks_v.Gather(tracks[nextTrack], i);
+            lane[i] = nextTrack++;
+          }
+        }
+        // Calculate c_v values again with new tracks
+        rad2_v = fTracks_v.fPos_v.Mag2();
+        c_v    = rad2_v - radius2;
+      }
     }
 
     // Execute remaining tracks in scalar mode
     for (auto i = 0; i < kVectorSize; i++) Execute(tracks[lane[i]]);
-
-    // The step was determined following: examples/trackML/src/SimpleStepper.cxx 
   }
 
   // Vector mode executor
@@ -197,16 +181,17 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
     const double radius = 20. * geant::units::cm;
     PropagateToR(radius, tracks);
     for (const auto& track : tracks) {
-      std::cout << "Track " << track->Event() << " made " << track->GetNsteps() << " steps. ";
+      std::cout << "Track " << track->Event() << " made " << track->GetNsteps()
+        << " steps. ";
       std::cout << "Exit position: " << track->Position() << "\n";
     }
   }
 
   // Task struct constructor
   TaskPropagator(trackml::HelixPropagator* propagator, trackml::SimpleStepper*
-      stepper, ConstFieldHelixStepper* helixstepper, SIMDTracks<Track> simd) :
+      stepper, ConstFieldHelixStepper* helixstepper, Tracks_v<Track> simd) :
     fPropagator(propagator), fStepper(stepper), fHelixStepper(helixstepper),
-    fSIMDStruct(simd) {}
+    fTracks_v(simd) {}
 };
 
 int main(int argc, char* argv[]) {
@@ -242,13 +227,13 @@ int main(int argc, char* argv[]) {
   ConstFieldHelixStepper*   helixstepper = new ConstFieldHelixStepper(bfield);
 
   // Create SIMD struct to handle vectorization
-  SIMDTracks<Track> mySIMDStruct;
+  Tracks_v<Track> myTracks_v;
 
   // Create a pipeline flow with one stage
   PipelineFlow<Track, std::vector<Track*>, 1> plFlow;
 
   // Create and initialize the propagator task
-  TaskPropagator tPropagate(propagator, stepper, helixstepper, mySIMDStruct);
+  TaskPropagator tPropagate(propagator, stepper, helixstepper, myTracks_v);
 
   // Add the task to the flow
   static constexpr size_t kPropagatorStage = 0;
