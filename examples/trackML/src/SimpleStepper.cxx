@@ -6,7 +6,7 @@
 
 namespace trackml {
 
-void SimpleStepper::PropagateToR(double radius, vectorflow::Track &track) const
+void SimpleStepper::PropagateToR(const double radius, vectorflow::Track &track) const
 {
   // Compute safe distance for the track to getting outside the sphere of given radius
   using namespace vecgeom;

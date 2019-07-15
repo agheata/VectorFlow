@@ -14,7 +14,7 @@
 #include <vector>
 #include <cassert>
 #include <vectorFlow/PipelineFlow.h>
-#include <vecCore/vecCore>
+#include <VecCore/VecCore>
 #include "CocktailGenerator.h"
 #include "Event.h"
 #include "Track.h"
@@ -43,16 +43,27 @@ struct Tracks_v {
   // Auxiliar vectorized methods
   Double_v Pt_v() const { return fMomentum_v * fDir_v.Perp(); }
 
-  Double_v Curvature_v(double Bz) { 
+  Double_v Curvature_v(double Bz)
+  {
+    using constants::kB2C;
+    using constants::kTiny;
     Double_v qB_v = fCharge_v * Bz; 
-    Double_v curvature_v = vecCore::math::Abs(Track::kB2C * qB_v / (Pt_v() +
-          Track::kTiny)); 
-    return vecCore::Blend<Double_v>(vecCore::math::Abs(qB_v) < Track::kTiny,
-        Track::kTiny, curvature_v);
+    Double_v curvature_v = vecCore::math::Abs(kB2C * qB_v / (Pt_v() + kTiny)); 
+    return vecCore::Blend<Double_v>(vecCore::math::Abs(qB_v) < kTiny, kTiny, curvature_v);
+  }
+
+  // Check if all tracks are normalized
+  VECGEOM_FORCE_INLINE
+  bool IsNormalized() const
+  {
+    Double_v norm = fDir_v.Mag2();
+    MaskD_v is_norm = 1. - vecgeom::kTolerance < norm && norm < 1 + vecgeom::kTolerance;
+    return vecCore::MaskFull(is_norm);
   }
 
   // Gather info to fill one SIMD lane
-  void Gather(Data* track, const std::size_t lane) {
+  void Gather(Data* track, const std::size_t lane)
+  {
     Set(fPos_v.x() , lane, track->Position().x());
     Set(fPos_v.y() , lane, track->Position().y());
     Set(fPos_v.z() , lane, track->Position().z());
@@ -61,7 +72,7 @@ struct Tracks_v {
     Set(fDir_v.z() , lane, track->Direction().z());
     Set(fCharge_v  , lane, track->Charge());
     Set(fMomentum_v, lane, track->P());
-    Set(fNSteps_v  , lane, 0);
+    Set(fNSteps_v  , lane, track->GetNsteps());
   }
 
   // Scatter one lane info back to original structure
@@ -83,11 +94,34 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
   ConstFieldHelixStepper*   fHelixStepper;
   Tracks_v<Track> fTracks_v;
 
+  // Task struct constructor
+  TaskPropagator(trackml::HelixPropagator* propagator, trackml::SimpleStepper*
+      stepper, ConstFieldHelixStepper* helixstepper, Tracks_v<Track> simd) :
+    fPropagator(propagator), fStepper(stepper), fHelixStepper(helixstepper),
+    fTracks_v(simd) {}
+
   // Scalar mode executor
   void Execute(Track* track) {
     // Propagate track to the boundary of a sphere of radius 20cm
+    std::cout << "--EXECUTION IN SCALAR MODE--\n";
     const double radius = 20. * geant::units::cm;
-    fStepper->PropagateToR(radius, *track); 
+    /*fStepper->*/PropagateToR(radius, *track); 
+    std::cout << "Track " << track->Index() << " made " << track->GetNsteps()
+              << " steps. ";
+    std::cout << "Exit position: " << track->Position() << "\n";
+  }
+
+  // Vector mode executor
+  void Execute(std::vector<Track*> const& tracks) {
+    std::cout << "--EXECUTION IN VECTOR MODE--\n";
+    // Propagate track to the boundary of a sphere of radius 20cm
+    const double radius = 20. * geant::units::cm;
+    PropagateToR(radius, tracks);
+    for (const auto& track : tracks) {
+      std::cout << "Track " << track->Index() << " made " << track->GetNsteps()
+        << " steps. ";
+      std::cout << "Exit position: " << track->Position() << "\n";
+    }
   }
 
   // Function to check whether all lanes can still be propagated or not
@@ -95,15 +129,67 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
     return vecCore::MaskFull(c_v < 0);
   }
 
+  // PropagateToR function for a track
+  void PropagateToR(double radius, Track &track) const
+  {
+    // Compute safe distance for the track to getting outside the sphere of given radius
+    using namespace vecgeom;
+    constexpr double epsilon = 1.E-4 * geant::units::mm;
+    constexpr double toKiloGauss = 1.0 / geant::units::kilogauss; // Converts to kilogauss
+    
+    Vector3D<double> pos = track.Position();
+    Vector3D<double> dir = track.Direction();
+    Vector3D<double> const bfield = fPropagator->GetBfield();
+    const double radius2 = radius * radius;
+    double rad2 = pos.Mag2();
+    double c = rad2 - radius2;
+
+    // Enter the stepping loop while the track is inside the sphere of given radius
+    while (c < 0) {
+      double safety = radius - Sqrt(rad2);
+      // Maximum allowed distance so that the sagitta of the track trajectory along this distance
+      // is less than a fraction of epsilon of the distance
+      double dmax = 8. * epsilon / track.Curvature(bfield.z() * toKiloGauss);
+
+      // Compute distance along straight line to exit the sphere
+      double pDotV   = pos.Dot(dir);
+      double d2      = pDotV * pDotV - c;
+      double snext   = -pDotV + Sqrt(vecCore::math::Abs(d2));
+
+      track.SetSafety(safety);
+      track.SetSnext(snext);
+
+      double step_geom = Max(epsilon, track.GetSnext());
+      double step_field = Max(dmax, safety);
+      double step = Min(step_geom, step_field);
+
+      // Propagate in field with step distance (update position and direction)
+      fPropagator->Propagate(track, step);
+
+      // Update track state other than position/direction
+      track.DecreasePstep(step);
+      track.DecreaseSnext(step);
+      track.DecreaseSafety(step);
+      track.IncreaseStep(step);
+      track.IncrementNsteps();
+
+      // Update local variables
+      pos = track.Position();
+      dir = track.Direction();
+      rad2 = pos.Mag2();
+      c = rad2 - radius2;
+    }
+  }
+
   // PropagateToR function for a vector of tracks
-  void PropagateToR(const double& radius, std::vector<Track*> const& tracks) {
+  void PropagateToR(const double radius, std::vector<Track*> const& tracks) {
     const std::size_t kTracksSize = tracks.size();
     const std::size_t kVectorSize = vecCore::VectorSize<Double_v>();
     
     // Execute scalar mode if there are less tracks than vector lanes
     if (kTracksSize < kVectorSize) {
-      for (auto i = 0; i < kTracksSize; i++)
-        Execute(tracks[i]);
+      for (auto track : tracks)
+        PropagateToR(radius, *track);
       return;
     }
     
@@ -127,9 +213,10 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
     nextTrack += kVectorSize;
     rad2_v     = fTracks_v.fPos_v.Mag2();
     c_v        = rad2_v - radius2;
+    bool ongoing = vecCore::MaskFull(c_v < 0);
 
     // Execute until all lanes can at least do one more step
-    while (AllLanesCanDoStep(c_v)) {      
+    while (ongoing) {
       safety_v = radius - vecCore::math::Sqrt(rad2_v);
       dmax_v   = 8. * epsilon / fTracks_v.Curvature_v(bfield.z() * toKiloGauss);
       pDotV_v  = fTracks_v.fPos_v.Dot(fTracks_v.fDir_v);
@@ -144,59 +231,70 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
           fTracks_v.fCharge_v, fTracks_v.fMomentum_v, step_v, fTracks_v.fPos_v,
           fTracks_v.fDir_v);
       
-      assert(fTracks_v.fDir_v.IsNormalized() && 
+      assert(fTracks_v.IsNormalized() && 
           "ERROR: Direction not normalized after field propagation");
 
+      // Calculate c_v values again for the propagated tracks
       rad2_v = fTracks_v.fPos_v.Mag2();
       c_v    = rad2_v - radius2;
 
       fTracks_v.fNSteps_v += 1;
 
       // Assign new track to a lane if previous was fully propagated
-      if (!AllLanesCanDoStep(c_v)) {
-        for (auto i = 0; i < kVectorSize; i++) {
-          if (Get(c_v, i) >= 0 && nextTrack < kTracksSize) {
+      if (!vecCore::MaskFull(c_v < 0)) {
+        // There are finished lanes, check if we have enough tracks to refill
+        bool refill = (kTracksSize - nextTrack) > kVectorSize;
+        if (!refill) refill = (kTracksSize - nextTrack) > MaskCount(c_v >= 0);
+        if (refill) {
+          // We have enough tracks to refill the done lanes
+          for (auto i = 0; i < kVectorSize; i++) {
+            if (Get(c_v, i) >= 0) {
+              // Scatter back the propagated track
+              fTracks_v.Scatter(i, tracks[lane[i]]);
+
+              // Set values for new track in its corresponding lane
+              fTracks_v.Gather(tracks[nextTrack], i);
+              lane[i] = nextTrack++;
+              // Update rad2_v and c_v
+              double rad2 = tracks[lane[i]]->Position().Mag2();
+              Set(rad2_v, i, rad2);
+              Set(c_v, i, rad2 - radius2);
+            }
+          }
+        } else {
+          // Not enough tracks to refill the vector mode, scatter existing ones
+          for (auto i = 0; i < kVectorSize; i++) {
             // Scatter back the propagated track
             fTracks_v.Scatter(i, tracks[lane[i]]);
-
-            // Set values for new track in its corresponding lane
-            fTracks_v.Gather(tracks[nextTrack], i);
-            lane[i] = nextTrack++;
+            if (Get(c_v, i) < 0) {
+              // Track not fully propagated yet, propagate in scalar mode
+              PropagateToR(radius, *tracks[lane[i]]);
+            }
           }
+          ongoing = false;
         }
-        // Calculate c_v values again with new tracks
-        rad2_v = fTracks_v.fPos_v.Mag2();
-        c_v    = rad2_v - radius2;
       }
     }
 
     // Execute remaining tracks in scalar mode
-    for (auto i = 0; i < kVectorSize; i++) Execute(tracks[lane[i]]);
+    while (nextTrack < kTracksSize)
+      PropagateToR(radius, *tracks[nextTrack++]);
   }
-
-  // Vector mode executor
-  void Execute(std::vector<Track*> const& tracks) {
-    std::cout << "--EXECUTION IN VECTOR MODE--\n";
-    // Propagate track to the boundary of a sphere of radius 20cm
-    const double radius = 20. * geant::units::cm;
-    PropagateToR(radius, tracks);
-    for (const auto& track : tracks) {
-      std::cout << "Track " << track->Event() << " made " << track->GetNsteps()
-        << " steps. ";
-      std::cout << "Exit position: " << track->Position() << "\n";
-    }
-  }
-
-  // Task struct constructor
-  TaskPropagator(trackml::HelixPropagator* propagator, trackml::SimpleStepper*
-      stepper, ConstFieldHelixStepper* helixstepper, Tracks_v<Track> simd) :
-    fPropagator(propagator), fStepper(stepper), fHelixStepper(helixstepper),
-    fTracks_v(simd) {}
 };
 
 int main(int argc, char* argv[]) {
   // Read number of events to be generated
-  int nEvents = argv[1] == NULL ? 10 : atoi(argv[1]);
+  int nEvents = 10;
+  bool vector_mode = false;
+  if (argc > 1)
+    nEvents = atoi(argv[1]);
+  if (argc > 2) {
+    vector_mode = !strcmp(argv[2], "v");
+  }
+  if (vector_mode)
+    std::cout << "Using vector mode\n";
+  else
+    std::cout << "Using scalar mode\n";
 
   // Add CocktailGenerator
   vecgeom::Vector3D<double> vertex(0., 0., 10.);
@@ -209,8 +307,8 @@ int main(int argc, char* argv[]) {
 
   // Set parameters of the generator
   cocktailGen.SetPrimaryEnergyRange(0.1 * geant::units::GeV, 10 * geant::units::GeV);
-  cocktailGen.SetMaxPrimaryPerEvt(100);
-  cocktailGen.SetAvgPrimaryPerEvt(70);
+  cocktailGen.SetMaxPrimaryPerEvt(25);
+  cocktailGen.SetAvgPrimaryPerEvt(25);
   cocktailGen.SetVertex(vertex);
   cocktailGen.SetMaxDepth(2);
 
@@ -240,12 +338,13 @@ int main(int argc, char* argv[]) {
   plFlow.AddWork(&tPropagate, kPropagatorStage);
 
   // Set the task to be executed in vector mode
-  plFlow.SetVectorMode(kPropagatorStage, true);
+  plFlow.SetVectorMode(kPropagatorStage, vector_mode);
 
   // Event loop
   for (auto i = 0; i < nEvents; i++) {
     CocktailGenerator::Event_t* event = cocktailGen.NextEvent();
     event->SetEvent(i);
+    //event->Print("ALL");
 
     // Add data to the flow
     std::cout << "\n=== Propagating event " << i << "\n";

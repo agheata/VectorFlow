@@ -97,7 +97,8 @@ CocktailGenerator::Event_t *CocktailGenerator::NextEvent()
     // Generate particle energy
     double energy = fRndm->uniform(fMinBeamEnergy, fMaxBeamEnergy);
     vectorflow::Track *track = new vectorflow::Track(fMaxDepth);
-    track->SetEvent(fCurrentEvent++);
+    track->SetEvent(fCurrentEvent);
+    track->SetIndex(i);
     track->SetParticle(pid);
     track->SetPrimaryParticleIndex(i);
     track->SetCharge((int)particle->GetPDGCharge());
@@ -112,6 +113,7 @@ CocktailGenerator::Event_t *CocktailGenerator::NextEvent()
     // Add track to the current event
     event->AddPrimary(track);
   }
+  fCurrentEvent++;
 
   return event;
 }

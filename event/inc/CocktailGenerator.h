@@ -61,8 +61,8 @@ private:
   CocktailGenerator &operator=(const CocktailGenerator &) = delete;
 
 private:
-  bool fInitialized;                                ///< Generator initialized
-  std::vector<std::pair<int, float>> fSpecies;     ///< Species of particles and their weights in the generator
+  bool fInitialized             = false;            ///< Generator initialized
+  std::vector<std::pair<int, float>> fSpecies;      ///< Species of particles and their weights in the generator
   int fMaxPrimaries             = 0;                ///< Maximum number of primaries per event
   int fAveragePrimaries         = 0;                ///< average number of primaries per event
   int fMaxDepth                 = 0;                ///< Geometry maximum depth
