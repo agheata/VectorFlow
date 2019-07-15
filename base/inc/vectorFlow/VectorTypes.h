@@ -27,6 +27,17 @@ const auto kVecAlignF = sizeof(Float_v);
 
 constexpr int kVecAlignment = VECCORE_SIMD_ALIGN;
 
+/// Count number of set lanes on a mask
+template <typename Mask_t>
+inline
+size_t MaskCount(Mask_t const &mask)
+{
+  size_t count = 0;
+  for (size_t lane = 0; lane < vecCore::VectorSize<Mask_t>(); ++lane)
+    count += vecCore::Get(mask, lane);
+  return count;
+}
+
 inline
 void CopyFltToDbl(Float_v const &flt_v, Double_v &dbl1_v, Double_v &dbl2_v)
 {

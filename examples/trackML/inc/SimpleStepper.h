@@ -1,6 +1,8 @@
 #ifndef TRACKML_SIMPLE_STEPPER_H
 #define TRACKML_SIMPLE_STEPPER_H
 
+#include <vector>
+
 namespace vectorflow {
   class Track;
 }

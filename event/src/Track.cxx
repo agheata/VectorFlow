@@ -25,13 +25,13 @@ Track &Track::operator=(const Track &other)
   if (&other != this) {
     fEvent              = other.fEvent;
     fParticle           = other.fParticle;
+    fIndex              = other.fIndex;
     fPrimaryIndx        = other.fPrimaryIndx;
     fMother             = other.fMother;
     fCharge             = other.fCharge;
     fNsteps             = other.fNsteps;
     fMaxDepth           = other.fMaxDepth;
     fGeneration         = other.fGeneration;
-    fSpecies            = other.fSpecies;
     fStatus             = other.fStatus;
     fMass               = other.fMass;
     fPos                = other.fPos;
@@ -60,10 +60,10 @@ void Track::Clear(const char *)
   fEvent       = -1;
   fParticle    = -1;
   fPrimaryIndx = -1;
+  fIndex       = -1;
   fMother      = 0;
   fCharge      = 0;
   fNsteps      = 0;
-  fSpecies     = kHadron;
   fStatus      = kAlive;
   fMass        = 0.;
   fPos         = 0.;
@@ -128,10 +128,10 @@ void Track::Print(const char *msg) const
 {
   const char *status[8] = {"alive", "killed", "inflight", "boundary", "exitSetup", "physics", "postponed", "new"};
 
-  printf("%s: evt=%d part=%d prim=%d mth=%d chg=%d nstp=%d spc=%d status=%s mass=%g "
+  printf("%s evt=%d part=%d idx=%d prim=%d mth=%d chg=%d nstp=%d status=%s mass=%g "
          "xpos=%g ypos=%g zpos=%g xdir=%g ydir=%g zdir=%g mom=%g ene=%g time=%g pstp=%g stp=%g snxt=%g saf=%g bdr=%d\n",
-         msg, fEvent, fParticle, fPrimaryIndx, fMother, fCharge, fNsteps,
-         (int)fSpecies, status[int(fStatus)], fMass, fPos[0], fPos[1], fPos[2], fDir[0], fDir[1], fDir[2], fP, fE, fTime, fPstep,
+         msg, fEvent, fParticle, fIndex, fPrimaryIndx, fMother, fCharge, fNsteps,
+         status[int(fStatus)], fMass, fPos[0], fPos[1], fPos[2], fDir[0], fDir[1], fDir[2], fP, fE, fTime, fPstep,
          fStep, fSnext, fSafety, fBoundary);
 }
 
@@ -139,7 +139,7 @@ void Track::Print(const char *msg) const
 void Track::PrintTracks(TrackVec_t &tracks)
 {
   for (auto track : tracks)
-    track->Print("xxx");
+    track->Print("");
 }
 
 } // namespace vectorflow

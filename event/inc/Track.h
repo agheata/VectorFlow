@@ -29,6 +29,11 @@
 
 namespace vectorflow {
 
+namespace constants {
+  constexpr double kB2C  = -0.299792458e-3;
+  constexpr double kTiny = 1.E-50;
+}
+
 /// The definition of track status flags.
 enum TrackStatus_t { kAlive, kKilled, kInFlight, kBoundary, kExitingSetup, kPhysics, kPostponed, kNew };
 
@@ -39,9 +44,6 @@ enum TransportAction_t {
   kSingle   = 2, ///< Perform remaining loop in single track mode
   kVector   = 3  ///< Perform remaining loop in vectorized mode
 };
-
-/// Particle species
-enum Species_t { kHadron, kLepton };
 
 class Track;
 
@@ -58,14 +60,14 @@ class Track {
 
 private:
   int fEvent               = -1;      ///< Event number
-  int fParticle            = -1;      ///< Index of corresponding particle
+  int fParticle            = -1;      ///< Particle type
+  int fIndex               = -1;      ///< Index of corresponding particle
   int fPrimaryIndx         = -1;      ///< Index of the primary particle in the current event
   int fMother              = -1;      ///< Index of mother particle
   int fCharge              = 0;       ///< Particle charge
   int fNsteps              = 0;       ///< Number of steps made
   int fMaxDepth            = 0;       ///< Maximum geometry depth
   int fGeneration          = 0;       ///< Track generation: 0=primary
-  Species_t fSpecies       = kHadron; ///< Particle species
   TrackStatus_t fStatus    = kAlive;  ///< Track status
   double fMass             = 0;       ///< Particle mass
   Vector3D<double> fPos;              ///< Particle position
@@ -88,9 +90,6 @@ private:
 
 public:
 
-  static constexpr double kB2C  = -0.299792458e-3;
-  static constexpr double kTiny = 1.E-50;
-
   /// Track constructor
   Track(size_t maxdepth = 0);
 
@@ -112,6 +111,9 @@ public:
 
   /// Getter for the index of the primary particle in the current event
   int PrimaryParticleIndex() const { return fPrimaryIndx; }
+
+  /// Getter for the index of the track
+  int Index() const { return fIndex; }
 
   /// Getter for thes index of mother particle
   int Mother() const { return fMother; }
@@ -147,9 +149,6 @@ public:
 
   /// Getter for track generation (0 = primary)
   int GetGeneration() const { return fGeneration; }
-
-  /// Getter for the particle species
-  Species_t Species() const { return fSpecies; }
 
   /// Getter for the track status
   TrackStatus_t Status() const { return fStatus; }
@@ -363,6 +362,8 @@ public:
   /// Getter for the curvature. To be changed when handling properly field
   double Curvature(double Bz) const
   {
+    using constants::kB2C;
+    using constants::kTiny;
     // Curvature
     double qB = fCharge * Bz;
     if (fabs(qB) < kTiny) return kTiny;
@@ -410,6 +411,9 @@ public:
   /// Setter for primary particle index in the current event
   void SetPrimaryParticleIndex(int primaryindx) { fPrimaryIndx = primaryindx; }
 
+  /// Setter for the track index in the current event
+  void SetIndex(int indx) { fIndex = indx; }
+
   /// Setter for mother index
   void SetMother(int mother) { fMother = mother; }
 
@@ -424,9 +428,6 @@ public:
 
   /// Setter for particle generation
   void SetGeneration(int generation) { fGeneration = generation; }
-
-  /// Setter for particle species
-  void SetSpecies(Species_t species) { fSpecies = species; }
 
   /// Setter for track status
   void SetStatus(TrackStatus_t status) { fStatus = status; }
