@@ -3,7 +3,7 @@
 
 #include <base/Global.h>
 #include <base/Vector3D.h>
-#include <VecCore/SIMD.h>
+#include <VecCore/VecCore>
 
 namespace vectorflow {
 
