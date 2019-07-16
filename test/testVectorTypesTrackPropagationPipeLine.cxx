@@ -87,12 +87,16 @@ struct Tracks_v {
   }
 };
 
+//===============================================================================
 struct TaskPropagator : public Work<Track, std::vector<Track*>> {
   // Propagator task needs a stepper
-  trackml::HelixPropagator* fPropagator;
-  trackml::SimpleStepper*   fStepper;
-  ConstFieldHelixStepper*   fHelixStepper;
+  trackml::HelixPropagator *fPropagator   = nullptr;
+  trackml::SimpleStepper   *fStepper      = nullptr;
+  ConstFieldHelixStepper   *fHelixStepper = nullptr;
   Tracks_v<Track> fTracks_v;
+  vecgeom::Vector3D<double> fPosChecksum  = 0;
+  size_t fNstepsSum                       = 0;
+  bool fVerbose                           = false;
 
   // Task struct constructor
   TaskPropagator(trackml::HelixPropagator* propagator, trackml::SimpleStepper*
@@ -103,24 +107,30 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
   // Scalar mode executor
   void Execute(Track* track) {
     // Propagate track to the boundary of a sphere of radius 20cm
-    std::cout << "--EXECUTION IN SCALAR MODE--\n";
     const double radius = 20. * geant::units::cm;
-    /*fStepper->*/PropagateToR(radius, *track); 
-    std::cout << "Track " << track->Index() << " made " << track->GetNsteps()
-              << " steps. ";
-    std::cout << "Exit position: " << track->Position() << "\n";
+    /*fStepper->*/PropagateToR(radius, *track);
+    fPosChecksum += track->Position();
+    fNstepsSum   += track->GetNsteps();
+    if (fVerbose) {
+      std::cout << "Track " << track->Index() << " made " << track->GetNsteps()
+                << " steps. ";
+      std::cout << "Exit position: " << track->Position() << "\n";
+    }
   }
 
   // Vector mode executor
   void Execute(std::vector<Track*> const& tracks) {
-    std::cout << "--EXECUTION IN VECTOR MODE--\n";
     // Propagate track to the boundary of a sphere of radius 20cm
     const double radius = 20. * geant::units::cm;
     PropagateToR(radius, tracks);
     for (const auto& track : tracks) {
-      std::cout << "Track " << track->Index() << " made " << track->GetNsteps()
-        << " steps. ";
-      std::cout << "Exit position: " << track->Position() << "\n";
+      fPosChecksum += track->Position();
+      fNstepsSum   += track->GetNsteps();
+      if (fVerbose) {
+        std::cout << "Track " << track->Index() << " made " << track->GetNsteps()
+                  << " steps. ";
+        std::cout << "Exit position: " << track->Position() << "\n";
+      }
     }
   }
 
@@ -255,12 +265,11 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
               // Set values for new track in its corresponding lane
               fTracks_v.Gather(tracks[nextTrack], i);
               lane[i] = nextTrack++;
-              // Update rad2_v and c_v
-              double rad2 = tracks[lane[i]]->Position().Mag2();
-              Set(rad2_v, i, rad2);
-              Set(c_v, i, rad2 - radius2);
             }
           }
+          // Update rad2_v and c_v (even if possibly just one lane changed)
+          rad2_v = fTracks_v.fPos_v.Mag2();
+          c_v    = rad2_v - radius2;
         } else {
           // Not enough tracks to refill the vector mode, scatter existing ones
           for (auto i = 0; i < kVectorSize; i++) {
@@ -284,17 +293,17 @@ struct TaskPropagator : public Work<Track, std::vector<Track*>> {
 
 int main(int argc, char* argv[]) {
   // Read number of events to be generated
-  int nEvents = 10;
+  int nTracks = 10;
   bool vector_mode = false;
   if (argc > 1)
-    nEvents = atoi(argv[1]);
+    nTracks = atoi(argv[1]);
   if (argc > 2) {
     vector_mode = !strcmp(argv[2], "v");
   }
   if (vector_mode)
-    std::cout << "Using vector mode\n";
+    std::cout << "--EXECUTION IN VECTOR MODE--\n";
   else
-    std::cout << "Using scalar mode\n";
+    std::cout << "--EXECUTION IN SCALAR MODE--\n";
 
   // Add CocktailGenerator
   vecgeom::Vector3D<double> vertex(0., 0., 10.);
@@ -307,8 +316,8 @@ int main(int argc, char* argv[]) {
 
   // Set parameters of the generator
   cocktailGen.SetPrimaryEnergyRange(0.1 * geant::units::GeV, 10 * geant::units::GeV);
-  cocktailGen.SetMaxPrimaryPerEvt(25);
-  cocktailGen.SetAvgPrimaryPerEvt(25);
+  cocktailGen.SetMaxPrimaryPerEvt(nTracks);
+  cocktailGen.SetAvgPrimaryPerEvt(nTracks);
   cocktailGen.SetVertex(vertex);
   cocktailGen.SetMaxDepth(2);
 
@@ -341,6 +350,7 @@ int main(int argc, char* argv[]) {
   plFlow.SetVectorMode(kPropagatorStage, vector_mode);
 
   // Event loop
+  int nEvents = 1; // benchmarking purpose
   for (auto i = 0; i < nEvents; i++) {
     CocktailGenerator::Event_t* event = cocktailGen.NextEvent();
     event->SetEvent(i);
@@ -356,6 +366,9 @@ int main(int argc, char* argv[]) {
 
     // Process the flow
     plFlow.Execute();
+
+    std::cout << "Checksum position:" << tPropagate.fPosChecksum << std::endl;
+    std::cout << "Checksum nsteps:  " << tPropagate.fNstepsSum << std::endl;
 
     // Clear pipeline and event
     plFlow.Clear();
