@@ -25,6 +25,7 @@
 #include "SimpleStepper.h"
 #include "vectorFlow/VectorTypes.h"
 #include "Geant/ConstFieldHelixStepper.h"
+#include "timer.h"
 
 using namespace vectorflow;
 using vecCore::Get;
@@ -32,6 +33,15 @@ using vecCore::Set;
 using vecCore::Load;
 using vecCore::Store;
 using vecCore::Scalar;
+
+// for benchmarking purposes
+#ifdef VECCORE_TIMER_CYCLES
+using time_unit = cycles;
+static const char* time_unit_name = "cycles";
+#else
+using time_unit = milliseconds;
+static const char* time_unit_name = "ms";
+#endif
 
 template <typename Data>
 struct Tracks_v {
@@ -356,8 +366,13 @@ int main(int argc, char* argv[]) {
     event->SetEvent(i);
     //event->Print("ALL");
 
-    // Add data to the flow
     std::cout << "\n=== Propagating event " << i << "\n";
+    
+    Timer<time_unit> timer; // timer for benchmarking
+    unsigned long long t = 0;
+
+    // Add data to the flow
+    timer.Start();
     for (auto j = 0; j < event->GetNprimaries(); j++) {
       Track* track = event->GetPrimary(j);
       // Only charged tracks will be added
@@ -366,9 +381,11 @@ int main(int argc, char* argv[]) {
 
     // Process the flow
     plFlow.Execute();
+    t = timer.Elapsed();
 
     std::cout << "Checksum position:" << tPropagate.fPosChecksum << std::endl;
     std::cout << "Checksum nsteps:  " << tPropagate.fNstepsSum << std::endl;
+    std::cout << "Execution time:   " << t << " " << time_unit_name << std::endl;
 
     // Clear pipeline and event
     plFlow.Clear();
