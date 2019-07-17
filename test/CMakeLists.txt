@@ -4,6 +4,7 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/event/inc
   ${CMAKE_SOURCE_DIR}/magneticfield/inc
   ${CMAKE_SOURCE_DIR}/examples/trackML/inc
+  ${CMAKE_SOURCE_DIR}/test/gbench/include
 )
 #----------------------------------------------------------------------------------------------
 # Add the executables
@@ -19,7 +20,7 @@ target_link_libraries(testTrackPropagationPipeLine TrackML VFevent Vmagfield -L$
 message(STATUS "Created target for testTrackPropagationPipeLine")
 
 add_executable(testVectorTypesTrackPropagationPipeLine testVectorTypesTrackPropagationPipeLine.cxx)
-target_link_libraries(testVectorTypesTrackPropagationPipeLine TrackML VFevent Vmagfield -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${VECGEOM_LIBRARIES})
+target_link_libraries(testVectorTypesTrackPropagationPipeLine TrackML VFevent Vmagfield benchmark -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${VECGEOM_LIBRARIES})
 message(STATUS "Created target for testVectorTypesTrackPropagationPipeLine")
 
 #----------------------------------------------------------------------------------------------
@@ -28,3 +29,5 @@ message(STATUS "Created target for testVectorTypesTrackPropagationPipeLine")
 install(TARGETS testInterfaces DESTINATION bin/tests)
 install(TARGETS testTrackPropagationPipeLine DESTINATION bin/tests)
 install(TARGETS testVectorTypesTrackPropagationPipeLine DESTINATION bin/tests)
+
+add_subdirectory(gbench EXCLUDE_FROM_ALL)

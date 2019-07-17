@@ -26,6 +26,7 @@
 #include "vectorFlow/VectorTypes.h"
 #include "Geant/ConstFieldHelixStepper.h"
 #include "timer.h"
+#include <benchmark/benchmark.h>
 
 using namespace vectorflow;
 using vecCore::Get;
@@ -360,10 +361,11 @@ int main(int argc, char* argv[]) {
   plFlow.SetVectorMode(kPropagatorStage, vector_mode);
 
   // Event loop
-  int nEvents = 1; // benchmarking purpose
-  for (auto i = 0; i < nEvents; i++) {
+//  int nEvents = 1; // benchmarking purpose
+//  for (auto i = 0; i < nEvents; i++) {
     CocktailGenerator::Event_t* event = cocktailGen.NextEvent();
     event->SetEvent(i);
+    // Make a copy of the tracks, so that we can run multiple times
     //event->Print("ALL");
 
     std::cout << "\n=== Propagating event " << i << "\n";
@@ -390,7 +392,7 @@ int main(int argc, char* argv[]) {
     // Clear pipeline and event
     plFlow.Clear();
     event->Clear();
-  }
+//  }
 
   // Clear created pointers
   delete stepper;
