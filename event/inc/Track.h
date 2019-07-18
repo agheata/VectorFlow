@@ -98,7 +98,7 @@ public:
   ~Track();
 
   /// Track copy constructor
-  Track(const Track &other) = delete;
+  Track(const Track &other) = default; // = delete;
 
   /// @brief Assignment
   Track &operator=(const Track &other);
