@@ -364,18 +364,27 @@ int main(int argc, char* argv[]) {
 //  int nEvents = 1; // benchmarking purpose
 //  for (auto i = 0; i < nEvents; i++) {
     CocktailGenerator::Event_t* event = cocktailGen.NextEvent();
-    event->SetEvent(i);
-    // Make a copy of the tracks, so that we can run multiple times
+//    event->SetEvent(i);
+
     //event->Print("ALL");
 
-    std::cout << "\n=== Propagating event " << i << "\n";
+    // Make a copy of the tracks, so that we can run multiple times
+    auto nPrimaries = event->GetNprimaries();
+    std::vector<Track*> baseTracks(nPrimaries);
+    for (auto in = 0; in < nPrimaries; in++){
+      Track* newTrack = event->GetPrimary(in);
+      baseTracks[in] = new Track(*newTrack);
+    }
+
+//    std::cout << "\n=== Propagating event " << i << ":\n";
+    std::cout << "\n=== Propagating event:\n";
     
     Timer<time_unit> timer; // timer for benchmarking
     unsigned long long t = 0;
 
     // Add data to the flow
     timer.Start();
-    for (auto j = 0; j < event->GetNprimaries(); j++) {
+    for (auto j = 0; j < nPrimaries; j++) {
       Track* track = event->GetPrimary(j);
       // Only charged tracks will be added
       if (track->Charge() != 0) plFlow.AddData(track);
@@ -392,12 +401,13 @@ int main(int argc, char* argv[]) {
     // Clear pipeline and event
     plFlow.Clear();
     event->Clear();
-//  }
+//  } // end of event-loop
 
   // Clear created pointers
   delete stepper;
   delete propagator;
   delete helixstepper;
+  baseTracks.clear();
 
   // End of test
   std::cout << "\n--END OF TEST--\n";
