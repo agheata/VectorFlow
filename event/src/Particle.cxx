@@ -42,7 +42,7 @@ int Particle::DefineParticles()
   new Particle("K+",       321, 10, 0.493677 * geant::units::GeV,   1.0 * geant::units::eplus);
   new Particle("K_S0",     310, 11, 0.497614 * geant::units::GeV,   0);
   new Particle("K0",       311, 12, 0.497614 * geant::units::GeV,   0);
-  printf("=== DefineParticles: %zu particles registered to the particle table\n", Particle::GetTheParticleTable().size());
+  // printf("=== DefineParticles: %zu particles registered to the particle table\n", Particle::GetTheParticleTable().size());
 }
 
 } // namespace geantphysics

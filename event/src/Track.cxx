@@ -14,8 +14,10 @@ Track::Track(size_t maxdepth)
 //______________________________________________________________________________
 Track::~Track()
 {
-  VolumePath_t::ReleaseInstance(fPath);
-  VolumePath_t::ReleaseInstance(fNextpath);
+  if (fPath) {
+    VolumePath_t::ReleaseInstance(fPath);
+    VolumePath_t::ReleaseInstance(fNextpath);
+  }
 }
 
 //______________________________________________________________________________
@@ -80,8 +82,10 @@ void Track::Clear(const char *)
   fMaxDepth    = 0;
   fGeneration  = 0;
   fVolume      = nullptr;
-  fPath->Clear();
-  fNextpath->Clear();
+  if (fPath) {
+    fPath->Clear();
+    fNextpath->Clear();
+  }
 }
 
 //______________________________________________________________________________
@@ -93,8 +97,10 @@ void Track::Reset(Track const &blueprint)
   memcpy(&fEvent, &blueprint.fEvent, sizeof(Track) - 3 * sizeof(void *));
 
   // Clear Geometry path
-  fPath->Clear();
-  fNextpath->Clear();
+  if (fPath) {
+    fPath->Clear();
+    fNextpath->Clear();
+  }
 }
 
 //______________________________________________________________________________
