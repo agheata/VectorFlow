@@ -50,7 +50,7 @@ public:
   void Clear();
 
   /// Function for retrieving a primary. No range check.
-  Track *GetPrimary(int i) { return fPrimaries[i]; }
+  Track *GetPrimary(int i) const { return fPrimaries[i]; }
 
   /// Get the number of primary tracks.
   int GetNprimaries() const { return fPrimaries.size(); }
