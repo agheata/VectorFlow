@@ -385,7 +385,7 @@ int main(int argc, char* argv[]) {
     // Add data to the flow
     timer.Start();
     for (auto j = 0; j < nPrimaries; j++) {
-      Track* track = event->GetPrimary(j);
+      Track* track = baseTracks[j]; // event->GetPrimary(j);
       // Only charged tracks will be added
       if (track->Charge() != 0) plFlow.AddData(track);
     }
@@ -397,6 +397,8 @@ int main(int argc, char* argv[]) {
     std::cout << "Checksum position:" << tPropagate.fPosChecksum << std::endl;
     std::cout << "Checksum nsteps:  " << tPropagate.fNstepsSum << std::endl;
     std::cout << "Execution time:   " << t << " " << time_unit_name << std::endl;
+
+    //event->Print("ALL");
 
     // Clear pipeline and event
     plFlow.Clear();
