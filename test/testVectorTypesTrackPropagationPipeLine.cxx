@@ -342,18 +342,24 @@ unsigned long long RunTest(PipelineFlow<Track, std::vector<Track *>, 1> &flow,
 //=============================================================================
 int main(int argc, char *argv[]) {
   // Read number of events to be generated
-  int nTracks = 10000;
+  int nTracks = 100000;
   int nTries = 10;
+  bool singletry = false;
+  bool vector_mode = false;
 
   if (argc == 1) {
     std::cout << "===  Usage:   testVectorTypesTrackPropagationPipeline "
-                 "[ntracks] [nrepetitions]\n";
+                 "[ntracks] [nrepetitions] [s/v]\n";
   };
 
   if (argc > 1)
     nTracks = atoi(argv[1]);
-  if (argc > 2) {
+  if (argc > 2)
     nTries = atoi(argv[2]);
+  if (argc > 3) {
+    singletry = true;
+    if (!strcmp(argv[3], "v"))
+      vector_mode = true;
   }
 
   // Add CocktailGenerator
@@ -400,6 +406,15 @@ int main(int argc, char *argv[]) {
 
   // Make a copy of the tracks, so that we can run multiple times
   std::vector<Track> tracks(event->GetNprimaries());
+
+  if (singletry) {
+    if (vector_mode) std::cout << "--EXECUTING SINGLE TRY IN VECTOR MODE--\n";
+    else             std::cout << "--EXECUTING SINGLE TRY IN SCALAR MODE--\n";
+    plFlow.SetVectorMode(kPropagatorStage, vector_mode);
+    auto time = RunTest(plFlow, event, tracks);
+    std::cout << "Execution time:   " << time << " [" << time_unit_name << "]\n";
+    return 0;
+  }
 
   int nwarm_up = 20;
   double sum = 0., sumv = 0.;
