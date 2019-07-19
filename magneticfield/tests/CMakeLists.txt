@@ -70,20 +70,20 @@ message(STATUS "Created target for testVectorIntegrationDriver")
 #message(STATUS "Created target for testVectorMagFieldEquation")
 
 # add_executable(testTClassicalRK4 testTClassicalRK4.cxx) ## ${sources} ${headers})
-# target_link_libraries(testTClassicalRK4 -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} Vmagfield ${VECGEOM_LIBRARIES})
+# target_link_libraries(testTClassicalRK4  Vmagfield ${VECGEOM_LIBRARIES})
 # message(STATUS "Created target for testTClassicalRK4")
 
 #add_executable(testStepperFixed testStepperFixed.cxx)
-#target_link_libraries(testStepperFixed -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} Vmagfield ${VECGEOM_LIBRARIES})
+#target_link_libraries(testStepperFixed  Vmagfield ${VECGEOM_LIBRARIES})
 #message(STATUS "Created target for testStepperFixed")
 
 ### Old test(s) ------
 # add_executable(testIntegrationDriver testIntegrationDriver.cxx) ## ${sources} ${headers})
-# target_link_libraries(testIntegrationDriver -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} Vmagfield ${VECGEOM_LIBRARIES})
+# target_link_libraries(testIntegrationDriver  Vmagfield ${VECGEOM_LIBRARIES})
 # message(STATUS "Created target for testIntegrationDriver")
 
 #add_executable(testGUPropagateField testGUPropagateField.cxx) ## ${sources} ${headers})
-#target_link_libraries(testGUPropagateField -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} Vmagfield ${VECGEOM_LIBRARIES})
+#target_link_libraries(testGUPropagateField  Vmagfield ${VECGEOM_LIBRARIES})
 #message(STATUS "Created target for testGUPropagateField")
 
 add_executable(testConstVecFieldStepper testConstVecFieldStepper.cxx) ## ${sources} ${headers})
@@ -91,7 +91,7 @@ target_link_libraries(testConstVecFieldStepper Vmagfield ${VECGEOM_LIBRARIES})
 message(STATUS "Created target for testConstVecFieldStepper")
 
 ## add_executable(testFieldPropagator TestGUFieldPropagator.cxx) ## ${sources} ${headers})
-## target_link_libraries(testFieldPropagator -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} Vmagfield ${VECGEOM_LIBRARIES})
+## target_link_libraries(testFieldPropagator  Vmagfield ${VECGEOM_LIBRARIES})
 ## # ${Geant4_LIBRARIES} ${ROOT_LIBRARIES} Xsec)
 ## # add_dependencies(micromc xseclib Geantlib_v)
 ## message(STATUS "Created target for testFieldPropagator")

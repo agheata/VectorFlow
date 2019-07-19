@@ -17,7 +17,7 @@ include_directories(
 # Add the library
 #
 add_library(TrackML SHARED ${sources} )
-target_link_libraries(TrackML VFevent Vmagfield -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${VECGEOM_LIBRARIES})
+target_link_libraries(TrackML VFevent Vmagfield  ${VECGEOM_LIBRARIES})
 
 #----------------------------------------------------------------------------------------------
 # Install the files
