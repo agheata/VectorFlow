@@ -13,7 +13,7 @@ file(GLOB headers inc/*.h)
 # Add the library
 #
 add_library(VFevent SHARED ${sources} )
-target_link_libraries(VFevent -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${VECGEOM_LIBRARIES} ${VecCore_LIBRARIES})
+target_link_libraries(VFevent  ${VECGEOM_LIBRARIES} ${VecCore_LIBRARIES})
 
 #----------------------------------------------------------------------------------------------
 # Install the files

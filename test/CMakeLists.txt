@@ -12,15 +12,15 @@ include_directories(
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/tests)
 
 add_executable(testInterfaces testInterfaces.cxx)
-target_link_libraries(testInterfaces TrackML -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${VECGEOM_LIBRARIES})
+target_link_libraries(testInterfaces TrackML ${VECGEOM_LIBRARIES})
 message(STATUS "Created target for testInterfaces")
 
 add_executable(testTrackPropagationPipeLine testTrackPropagationPipeLine.cxx)
-target_link_libraries(testTrackPropagationPipeLine TrackML VFevent Vmagfield -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${VECGEOM_LIBRARIES})
+target_link_libraries(testTrackPropagationPipeLine TrackML VFevent Vmagfield ${VECGEOM_LIBRARIES})
 message(STATUS "Created target for testTrackPropagationPipeLine")
 
 add_executable(testVectorTypesTrackPropagationPipeLine testVectorTypesTrackPropagationPipeLine.cxx)
-target_link_libraries(testVectorTypesTrackPropagationPipeLine TrackML VFevent Vmagfield benchmark -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${VECGEOM_LIBRARIES})
+target_link_libraries(testVectorTypesTrackPropagationPipeLine TrackML VFevent Vmagfield benchmark ${VECGEOM_LIBRARIES})
 message(STATUS "Created target for testVectorTypesTrackPropagationPipeLine")
 
 #----------------------------------------------------------------------------------------------
