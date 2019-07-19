@@ -18,8 +18,7 @@ include_directories(
 # Add the library
 #
 add_library(Vmagfield SHARED ${sources} )
-target_link_libraries(Vmagfield  -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${VECGEOM_LIBRARIES})
-
+target_link_libraries(Vmagfield  -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} ${VECGEOM_LIBRARIES} ${VecCore_LIBRARIES})
 #----------------------------------------------------------------------------------------------
 # Install the files
 #

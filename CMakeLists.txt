@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.6.0)
 
 include(cmake/RecordCmdLine.cmake)
 
+enable_language(CXX)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD 11 CACHE STRING "C++ ISO Standard")
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
 option(BUILD_TESTING  "Build test binaries and create test target"  ON)
 option(BUILD_EXAMPLES "Build binaries for performance benchmarking" ON)
 option(ROOT "Include ROOT" OFF)
@@ -51,7 +56,7 @@ if ( VECGEOM_DEFINITIONS MATCHES VECGEOM_ROOT )
 endif()
 
 #installation configuration
-install(DIRECTORY include/ DESTINATION include)
+#install(DIRECTORY include/ DESTINATION include)
 
 include(CMakePackageConfigHelpers)
 
