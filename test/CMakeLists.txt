@@ -20,7 +20,7 @@ target_link_libraries(testTrackPropagationPipeLine TrackML VFevent Vmagfield ${V
 message(STATUS "Created target for testTrackPropagationPipeLine")
 
 add_executable(testVectorTypesTrackPropagationPipeLine testVectorTypesTrackPropagationPipeLine.cxx)
-target_link_libraries(testVectorTypesTrackPropagationPipeLine TrackML VFevent Vmagfield benchmark ${VECGEOM_LIBRARIES})
+target_link_libraries(testVectorTypesTrackPropagationPipeLine TrackML VFevent Vmagfield benchmark ${VECGEOM_LIBRARIES} ${PROFILE_LIBRARIES})
 message(STATUS "Created target for testVectorTypesTrackPropagationPipeLine")
 
 #----------------------------------------------------------------------------------------------
