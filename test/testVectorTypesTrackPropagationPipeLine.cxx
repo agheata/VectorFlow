@@ -27,6 +27,9 @@
 #include <stdexcept>
 #include <vector>
 #include <vectorFlow/PipelineFlow.h>
+#ifdef USE_GPERFTOOLS
+#include <gperftools/profiler.h>
+#endif
 
 using namespace vectorflow;
 using vecCore::Get;
@@ -411,7 +414,16 @@ int main(int argc, char *argv[]) {
     if (vector_mode) std::cout << "--EXECUTING SINGLE TRY IN VECTOR MODE--\n";
     else             std::cout << "--EXECUTING SINGLE TRY IN SCALAR MODE--\n";
     plFlow.SetVectorMode(kPropagatorStage, vector_mode);
+#ifdef USE_GPERFTOOLS
+    // CPU profiling using gperftools
+    std::cout << "=== Profiling using gperftools. Output goes to gperfprof.out\n";
+    ProfilerStart("gperfprof.out");
+#endif
     auto time = RunTest(plFlow, event, tracks);
+#ifdef USE_GPERFTOOLS
+    ProfilerStop();
+    std::cout << "=== Profiling stopped\n";
+#endif
     std::cout << "Execution time:   " << time << " [" << time_unit_name << "]\n";
     return 0;
   }

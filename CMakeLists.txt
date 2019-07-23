@@ -6,7 +6,9 @@ enable_language(CXX)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 11 CACHE STRING "C++ ISO Standard")
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
 
+option(GPERFTOOLS "Enable profiling using Google performance tools" OFF)
 option(BUILD_TESTING  "Build test binaries and create test target"  ON)
 option(BUILD_EXAMPLES "Build binaries for performance benchmarking" ON)
 option(ROOT "Include ROOT" OFF)
@@ -53,6 +55,23 @@ include_directories(${VECGEOM_INCLUDE_DIRS})
 set ( VECGEOM_ROOT OFF )
 if ( VECGEOM_DEFINITIONS MATCHES VECGEOM_ROOT )
   set ( VECGEOM_ROOT ON )
+endif()
+
+#----------------------------------------------------------------------------
+# Find GPERFTOOLS
+#----------------------------------------------------------------------------
+if (GPERFTOOLS)
+  find_package(Gperftools)
+  if (GPERFTOOLS_FOUND)
+    add_definitions("-DUSE_GPERFTOOLS")
+    message(STATUS "Found Gperftools in " ${GPERFTOOLS_LIBRARIES})
+    set(PROFILE_LIBRARIES ${GPERFTOOLS_LIBRARIES})
+    include_directories( AFTER SYSTEM ${GPERFTOOLS_INCLUDE_DIR})
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -gdwarf")
+  else()
+    message(STATUS "Gperftools libraries not found. Install libgoogle-perftools-dev. Disabling Gperftools.")
+    set(GPERFTOOLS OFF)
+  endif()
 endif()
 
 #installation configuration
