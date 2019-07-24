@@ -76,15 +76,18 @@ template <typename Data> struct Tracks_v {
 
   // Gather info to fill one SIMD lane
   void Gather(Data *track, const std::size_t lane) {
-    Set(fPos_v.x(), lane, track->Position().x());
-    Set(fPos_v.y(), lane, track->Position().y());
-    Set(fPos_v.z(), lane, track->Position().z());
-    Set(fDir_v.x(), lane, track->Direction().x());
-    Set(fDir_v.y(), lane, track->Direction().y());
-    Set(fDir_v.z(), lane, track->Direction().z());
-    Set(fCharge_v, lane, track->Charge());
+    vecgeom::Vector3D<double> pos_v = track->Position();
+    vecgeom::Vector3D<double> dir_v = track->Direction();
+    
+    Set(fPos_v.x(),  lane, pos_v.x());
+    Set(fPos_v.y(),  lane, pos_v.y());
+    Set(fPos_v.z(),  lane, pos_v.z());
+    Set(fDir_v.x(),  lane, dir_v.x());
+    Set(fDir_v.y(),  lane, dir_v.y());
+    Set(fDir_v.z(),  lane, dir_v.z());
+    Set(fCharge_v,   lane, track->Charge());
     Set(fMomentum_v, lane, track->P());
-    Set(fNSteps_v, lane, track->GetNsteps());
+    Set(fNSteps_v,   lane, track->GetNsteps());
   }
 
   // Scatter one lane info back to original structure
