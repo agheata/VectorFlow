@@ -2,9 +2,17 @@
 #define TRACKML_SIMPLE_STEPPER_H
 
 #include <vector>
+#include <vectorFlow/Typedefs.h>
+#include "GeomData.h"
 
 namespace vectorflow {
   class Track;
+}
+
+namespace vecgeom {
+  namespace VECGEOM_IMPL_NAMESPACE {
+    class UnplacedTube;
+  }
 }
 
 namespace trackml {
@@ -14,13 +22,16 @@ class HelixPropagator;
 
 class SimpleStepper {
 private:
-  HelixPropagator *fPropagator = nullptr;
+  HelixPropagator *fPropagator    = nullptr;
+  std::vector<vecgeom::UnplacedTube *> fLayers;
 
 public:
-  SimpleStepper(HelixPropagator *prop) : fPropagator(prop) {}
+  SimpleStepper(HelixPropagator *prop);
   ~SimpleStepper() {}
 
   void PropagateToR(double radius, vectorflow::Track &track) const;
+
+  void PropagateInTube(int layer, vectorflow::Track &track) const;
 };
 
 } // namespace trackml
