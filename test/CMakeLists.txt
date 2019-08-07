@@ -23,11 +23,16 @@ add_executable(testVectorTypesTrackPropagationPipeLine testVectorTypesTrackPropa
 target_link_libraries(testVectorTypesTrackPropagationPipeLine TrackML VFevent Vmagfield benchmark ${VECGEOM_LIBRARIES} ${PROFILE_LIBRARIES})
 message(STATUS "Created target for testVectorTypesTrackPropagationPipeLine")
 
+add_executable(testTrackPropagationComplex testTrackPropagationComplex.cxx)
+target_link_libraries(testTrackPropagationComplex TrackML VFevent Vmagfield ${VECGEOM_LIBRARIES})
+message(STATUS "Created target for testTrackPropagationComplex")
+
 #----------------------------------------------------------------------------------------------
 # Install the files
 #
 install(TARGETS testInterfaces DESTINATION bin/tests)
 install(TARGETS testTrackPropagationPipeLine DESTINATION bin/tests)
 install(TARGETS testVectorTypesTrackPropagationPipeLine DESTINATION bin/tests)
+install(TARGETS testTrackPropagationComplex DESTINATION bin/tests)
 
 add_subdirectory(gbench EXCLUDE_FROM_ALL)

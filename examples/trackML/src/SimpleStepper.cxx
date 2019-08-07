@@ -113,15 +113,14 @@ void SimpleStepper::PropagateInTube(int layer, vectorflow::Track &track) const
 
     inside = tube->Contains(track.Position());
   }
-  // Determine next layer
-  if (Abs(track.Position().z()) > tube->z()) {
+
+  // Track is now on a boundary
+  track.SetStatus(vectorflow::kBoundary);
+  
+  // Exiting setup?
+  if (Abs(track.Position().z()) > tube->z() ||
+      track.Position().Perp() > kStrips2VolRmax) {
     track.SetStatus(vectorflow::kKilled);
-  } else {
-    int dlayer = CopySign(1., track.Position().Dot(track.Direction()));
-    assert(dlayer >= 0);
-    // Store next layer number in the "generation" field
-    track.SetGeneration(track.GetGeneration() + dlayer);
-    track.SetStatus(vectorflow::kBoundary);
   }
 }
 
