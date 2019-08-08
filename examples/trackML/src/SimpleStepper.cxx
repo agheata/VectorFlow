@@ -111,7 +111,7 @@ void SimpleStepper::PropagateInTube(int layer, vectorflow::Track &track) const
     track.IncreaseStep(step);
     track.IncrementNsteps();
 
-    inside = tube->Contains(track.Position());
+    inside = (step <= safety) ? true : tube->Contains(track.Position());
   }
 
   // Track is now on a boundary
