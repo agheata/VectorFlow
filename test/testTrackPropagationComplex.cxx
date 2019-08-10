@@ -23,26 +23,54 @@
 #include "base/Vector3D.h"
 #include "HelixPropagator.h"
 #include "SimpleStepper.h"
+#include "timer.h"
 
 using namespace vectorflow;
 
-//struct TaskPropagator : public Work<Event_t, std::vector<Event_t*>> {
+// For benchmarking purposes
+#ifdef VECCORE_TIMER_CYCLES
+  using time_unit = cycles;
+  static const char *time_unit_name = "cycles";
+#else
+  using time_unit = milliseconds;
+  static const char *time_unit_name = "ms";
+#endif
+
+//=============================================================================
 struct TaskLayerPropagator : public Work<Track, std::vector<Track*>> {
   // Propagator task needs a stepper
   int fLayer = -1;
-  trackml::SimpleStepper* fStepper = nullptr;
+  trackml::HelixPropagator *fPropagator = nullptr;
+  trackml::SimpleStepper   *fStepper    = nullptr;
+  bool fVerbose = true;
+
+  // Struct constructor
+  TaskLayerPropagator(int layer, vecgeom::Vector3D<double> const &bfield) {
+    fLayer = layer;
+    fPropagator = new trackml::HelixPropagator(bfield);
+    fStepper    = new trackml::SimpleStepper(fPropagator);
+  }
+
+  ~TaskLayerPropagator() {
+    delete fPropagator;
+    delete fStepper;
+  }
 
   // Scalar mode executor
   void Execute(Track* track) {
     // Propagate track to the boundary of the current cylindrical layer
     fStepper->PropagateInTube(fLayer, *track);
-    if (track->Status() == vectorflow::kKilled) {
-      std::cout << "Track " << track->PrimaryParticleIndex() << " from event " << track->Event()
-                << " made " << track->GetNsteps() << " steps. ";
-      std::cout << "Exit position: " << track->Position() << "\n";
-      return;
+    if (fVerbose) {
+      if (track->Status() == vectorflow::kKilled) {
+        std::cout << "Track " << track->PrimaryParticleIndex() << " from event "
+                  << track->Event() << " made " << track->GetNsteps() << " steps. ";
+        std::cout << "Exit position: " << track->Position() << "\n";
+        return;
+      }
     }
-    // Dispatch to next layer. Client 0 corresponds to the inner neighbour layer, client 1 to the outer one
+
+    // Dispatch to next layer. Client 0 corresponds to the inner neighbour
+    // layer, client 1 to the outer one
     bool move_outer = track->Position().Dot(track->Direction()) > 0;
     size_t client = 0;
     if (move_outer && fLayer > 0 && fLayer < 3) client = 1;
@@ -54,15 +82,51 @@ struct TaskLayerPropagator : public Work<Track, std::vector<Track*>> {
   void Execute(std::vector<Track*> const &tracks) {
     std::cout << "TaskPropagator::Execute not implemented for vector mode.\n";
   }
-
-  // Struct constructor
-  TaskLayerPropagator(int layer, trackml::SimpleStepper* stepper) : fLayer(layer), fStepper(stepper) {}
 };
 
+//=============================================================================
+void Propagate(std::vector<Track> &tracks, 
+               ComplexFlow<Track, std::vector<Track*>, 4> &flow) {
+  for (auto &track : tracks) {
+    // Only charged tracks will be added
+    if (track.Charge() != 0)
+      flow.AddData(&track);
+  }
+  // Process the flow
+  flow.Execute();
+}
+
+//=============================================================================
+unsigned long long RunTest(ComplexFlow<Track, std::vector<Track *>, 4> &flow,
+                           CocktailGenerator::Event_t const *event,
+                           std::vector<Track> &tracks) {
+  auto nPrimaries = event->GetNprimaries();
+  for (auto i = 0; i < nPrimaries; i++)
+    tracks[i].Reset(*event->GetPrimary(i));
+
+  Timer<time_unit> timer; // for benchmarking purposes
+  timer.Start();
+
+  Propagate(tracks, flow);
+
+  unsigned long long t = timer.Elapsed();
+
+  // Clearing all stages of the flow
+  for (auto i = 0; i < 4; ++i) flow.Clear(i);
+  return t;
+}
+
+//=============================================================================
 int main(int argc, char* argv[]) {
   using namespace geant::units;
   // Read number of events to be generated
-  int nEvents = argv[1] == NULL ? 10 : atoi(argv[1]);
+  int nTracks = 50;
+  int nTries  = 1;
+
+  if (argc > 1)
+    nTracks = atoi(argv[1]);
+  if (argc > 2)
+    nTries  = atoi(argv[2]);
 
   // Add CocktailGenerator
   vecgeom::Vector3D<double> vertex(0., 0., 10.);
@@ -75,8 +139,8 @@ int main(int argc, char* argv[]) {
 
   // Set parameters of the generator
   cocktailGen.SetPrimaryEnergyRange(0.1 * GeV, 10 * GeV);
-  cocktailGen.SetMaxPrimaryPerEvt(100);
-  cocktailGen.SetAvgPrimaryPerEvt(70);
+  cocktailGen.SetMaxPrimaryPerEvt(nTracks);
+  cocktailGen.SetAvgPrimaryPerEvt(nTracks);
   cocktailGen.SetVertex(vertex);
   cocktailGen.SetMaxDepth(2);
 
@@ -88,8 +152,6 @@ int main(int argc, char* argv[]) {
 
   // Initialize an helix propagator in field and a simple stepper
   vecgeom::Vector3D<double> bfield(0., 0., 20. * kilogauss);
-  trackml::HelixPropagator* propagator = new trackml::HelixPropagator(bfield);
-  trackml::SimpleStepper*   stepper    = new trackml::SimpleStepper(propagator);
 
   // Create a complex flow where each geometry layer is a stage
   using LayerFlow_t = ComplexFlow<Track, std::vector<Track *>, 4>;
@@ -99,7 +161,7 @@ int main(int argc, char* argv[]) {
   // Create and initialize the layer propagator tasks
   TaskLayerPropagator *propagators[4];
   for (auto i = 0; i < 4; ++i) {
-    propagators[i] = new TaskLayerPropagator(i, stepper);
+    propagators[i] = new TaskLayerPropagator(i, bfield);
     flow.AddWork(propagators[i], i);
     flow.SetVectorMode(i, false); // scalar flow
   }
@@ -110,30 +172,23 @@ int main(int argc, char* argv[]) {
     if (i < 3) propagators[i]->AddClient(&flow.InputData(i + 1));
   }
 
-  // Event loop
-  for (auto i = 0; i < nEvents; i++) {
-    CocktailGenerator::Event_t* event = cocktailGen.NextEvent();
-    event->SetEvent(i);
+  // Run one event for benchmarking purposes
+  CocktailGenerator::Event_t *event = cocktailGen.NextEvent();
 
-    // Add data to the flow
-    std::cout << "\n=== Propagating event " << i << "\n";
-    for (auto j = 0; j < event->GetNprimaries(); j++) {
-      Track* track = event->GetPrimary(j);
-      // Only charged tracks will be added
-      if (track->Charge() != 0) flow.AddData(track);
-    }
+  // Make a copy of the tracks, so that we can run the test multiple times
+  std::vector<Track> tracks(event->GetNprimaries());
 
-    /// Process the complex flow as long as there is still data in the buffers
-    while (flow.GetNstates())
-      flow.Execute();
-
-    // Clear the event
-    event->Clear();
+  std::cout << "\n--EXECUTING IN SCALAR MODE--\n";
+  double sum = 0.;
+  for (auto i = 0; i < nTries; i++) {
+    auto t = RunTest(flow, event, tracks);
+    sum += (double)t;
   }
+  double average = sum / nTries;
+  std::cout << "\nExecution time:   " << average << " [" << time_unit_name << "]\n";
 
   // Clearing created pointers
-  delete stepper;
-  delete propagator;
+  event->Clear();
   for (auto i = 0; i < 4; ++i) delete propagators[i];
 
   // End of test
