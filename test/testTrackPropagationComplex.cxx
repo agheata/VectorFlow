@@ -92,8 +92,9 @@ void Propagate(std::vector<Track> &tracks,
     if (track.Charge() != 0)
       flow.AddData(&track);
   }
-  // Process the flow
-  flow.Execute();
+  // Process the complex flow as long as there is still data in the buffers
+  while (flow.GetNstates())
+    flow.Execute();
 }
 
 //=============================================================================
