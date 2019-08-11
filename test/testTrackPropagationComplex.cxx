@@ -80,7 +80,30 @@ struct TaskLayerPropagator : public Work<Track, std::vector<Track*>> {
 
   // Vector mode executor
   void Execute(std::vector<Track*> const &tracks) {
-    std::cout << "TaskPropagator::Execute not implemented for vector mode.\n";
+    // Propagate vector fo tracks to the boundary of the current cylindrical layer
+    int nKills = 0;
+    fStepper->PropagateInTube(fLayer, tracks);
+    if (fVerbose) {
+      for (auto &track : tracks) {
+        if (track->Status() == vectorflow::kKilled) {
+          std::cout << "Track " << track->PrimaryParticleIndex() << " from event "
+                    << track->Event() << " made " << track->GetNsteps() << " steps. ";
+          std::cout << "Exit position: " << track->Position() << "\n";
+          nKills++;
+        }
+      }
+    }
+
+    // Return when all tracks are propagated
+    if (nKills == tracks.size()) return;
+    
+    for (auto &track : tracks) {
+      bool move_outer = track->Position().Dot(track->Direction()) > 0;
+      size_t client = 0;
+      if (move_outer && fLayer > 0 && fLayer < 3) client = 1;
+
+      Dispatch(track, client);
+    }
   }
 };
 
@@ -112,8 +135,6 @@ unsigned long long RunTest(ComplexFlow<Track, std::vector<Track *>, 4> &flow,
 
   unsigned long long t = timer.Elapsed();
 
-  // Clearing all stages of the flow
-  for (auto i = 0; i < 4; ++i) flow.Clear(i);
   return t;
 }
 
@@ -121,7 +142,7 @@ unsigned long long RunTest(ComplexFlow<Track, std::vector<Track *>, 4> &flow,
 int main(int argc, char* argv[]) {
   using namespace geant::units;
   // Read number of events to be generated
-  int nTracks = 50;
+  int nTracks = 20;
   int nTries  = 1;
 
   if (argc > 1)
@@ -180,13 +201,28 @@ int main(int argc, char* argv[]) {
   std::vector<Track> tracks(event->GetNprimaries());
 
   std::cout << "\n--EXECUTING IN SCALAR MODE--\n";
-  double sum = 0.;
+  double sum   = 0.;
+  int nwarm_up = 20;
+  // for (auto i = 0; i < nwarm_up; i++) RunTest(flow, event, tracks); // warm up
   for (auto i = 0; i < nTries; i++) {
     auto t = RunTest(flow, event, tracks);
     sum += (double)t;
   }
-  double average = sum / nTries;
-  std::cout << "\nExecution time:   " << average << " [" << time_unit_name << "]\n";
+  double average_s = sum / nTries;
+  std::cout << "\nExecution time:   " << average_s << " [" << time_unit_name << "]\n";
+
+  std::cout << "\n--EXECUTING IN VECTOR MODE--\n";
+  for (auto i = 0; i < 4; ++i) flow.SetVectorMode(i, true);
+  sum = 0;
+  // for (auto i = 0; i < nwarm_up; i++) RunTest(flow, event, tracks); // warm up
+  for (auto i = 0; i < nTries; i++) {
+    auto t = RunTest(flow, event, tracks);
+    sum += (double)t;
+  }
+  double average_v = sum / nTries;
+  std::cout << "\nExecution time:   " << average_v << " [" << time_unit_name << "]\n";
+
+  std::cout << "\nSpeed-up:   " << average_s / average_v << "x\n";
 
   // Clearing created pointers
   event->Clear();
