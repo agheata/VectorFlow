@@ -32,6 +32,8 @@ public:
   void PropagateToR(double radius, vectorflow::Track &track) const;
 
   void PropagateInTube(int layer, vectorflow::Track &track) const;
+
+  void PropagateInTube(int layer, std::vector<vectorflow::Track*> const &tracks) const;
 };
 
 } // namespace trackml

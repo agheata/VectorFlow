@@ -1,5 +1,4 @@
 #include "SimpleStepper.h"
-
 #include <management/GeoManager.h>
 #include <volumes/Tube.h>
 #include "Track.h"
@@ -121,6 +120,62 @@ void SimpleStepper::PropagateInTube(int layer, vectorflow::Track &track) const
   if (Abs(track.Position().z()) > tube->z() ||
       track.Position().Perp() > kStrips2VolRmax) {
     track.SetStatus(vectorflow::kKilled);
+  }
+}
+
+void SimpleStepper::PropagateInTube(int layer, std::vector<vectorflow::Track*> const &tracks) const
+{
+  for (auto &track : tracks) {  
+    // Propagate along a helix inside a tube 
+    using namespace vecgeom;
+    using namespace vecCore::math;
+    constexpr double tolerance = 1.E-9 * geant::units::mm;
+    constexpr double epsilon = 1.E-4 * geant::units::mm;
+    constexpr double toKiloGauss = 1.0 / geant::units::kilogauss; // Converts to kilogauss
+    const auto tube = fLayers[layer];
+
+    Vector3D<double> const bfield = fPropagator->GetBfield();
+
+    bool inside = true;
+    // Keep propagating while the particle is still inside the tube
+    while (inside) {
+      Vector3D<double> const &pos = track->Position();
+      Vector3D<double> const &dir = track->Direction();
+      double safety = tube->SafetyToOut(pos);
+      // Maximum allowed distance so that the sagitta of the track trajectory along this distance
+      // is less than a fraction of epsilon of the distance
+      double dmax = 8. * epsilon / track->Curvature(bfield.z() * toKiloGauss);
+      // Compute distance along straight line to exit the tube
+      double snext = tube->DistanceToOut(pos, dir);
+
+      track->SetSafety(safety);
+      track->SetSnext(snext);
+
+      double step_geom = Max(epsilon, snext);
+      double step_field = Max(dmax, safety);
+      double step = Min(step_geom, step_field);
+
+      // Propagate in field with step distance (update position and direction)
+      fPropagator->Propagate(*track, step);
+
+      // Update track state other than position/direction
+      track->DecreasePstep(step);
+      track->DecreaseSnext(step);
+      track->DecreaseSafety(step);
+      track->IncreaseStep(step);
+      track->IncrementNsteps();
+
+      inside = (step <= safety) ? true : tube->Contains(track->Position());
+    }
+
+    // Track is now on a boundary
+    track->SetStatus(vectorflow::kBoundary);
+  
+    // Exiting setup?
+    if (Abs(track->Position().z()) > tube->z() ||
+        track->Position().Perp() > kStrips2VolRmax) {
+      track->SetStatus(vectorflow::kKilled);
+    }
   }
 }
 
