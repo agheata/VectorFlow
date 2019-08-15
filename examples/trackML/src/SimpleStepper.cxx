@@ -4,6 +4,10 @@
 #include "Track.h"
 #include "HelixPropagator.h"
 #include "vectorFlow/SystemOfUnits.h"
+#include "Geant/ConstFieldHelixStepper.h"
+#include "Tracks_v.h"
+
+extern int gNkills;
 
 namespace trackml {
 
@@ -125,58 +129,118 @@ void SimpleStepper::PropagateInTube(int layer, vectorflow::Track &track) const
 
 void SimpleStepper::PropagateInTube(int layer, std::vector<vectorflow::Track*> const &tracks) const
 {
-  for (auto &track : tracks) {  
-    // Propagate along a helix inside a tube 
-    using namespace vecgeom;
-    using namespace vecCore::math;
-    constexpr double tolerance = 1.E-9 * geant::units::mm;
-    constexpr double epsilon = 1.E-4 * geant::units::mm;
-    constexpr double toKiloGauss = 1.0 / geant::units::kilogauss; // Converts to kilogauss
-    const auto tube = fLayers[layer];
+  const std::size_t kTracksSize = tracks.size();
+  const std::size_t kVectorSize = vecCore::VectorSize<Double_v>();
 
-    Vector3D<double> const bfield = fPropagator->GetBfield();
+  // Execute in scalar mode if there are less tracks than vector lanes
+  if (kTracksSize < kVectorSize) {
+    for (auto track : tracks)
+      PropagateInTube(layer, *track);
+    return;
+  }
 
-    bool inside = true;
-    // Keep propagating while the particle is still inside the tube
-    while (inside) {
-      Vector3D<double> const &pos = track->Position();
-      Vector3D<double> const &dir = track->Direction();
-      double safety = tube->SafetyToOut(pos);
-      // Maximum allowed distance so that the sagitta of the track trajectory along this distance
-      // is less than a fraction of epsilon of the distance
-      double dmax = 8. * epsilon / track->Curvature(bfield.z() * toKiloGauss);
-      // Compute distance along straight line to exit the tube
-      double snext = tube->DistanceToOut(pos, dir);
+  // VECTOR TYPES IMPLEMENTATION
+  Tracks_v<Track> tracks_v;
 
-      track->SetSafety(safety);
-      track->SetSnext(snext);
+  std::size_t lane[kVectorSize]; // Array to check which track is in which lane
+  std::size_t nextTrack = 0;     // Counter to keep track and dispatch tracks
 
-      double step_geom = Max(epsilon, snext);
-      double step_field = Max(dmax, safety);
-      double step = Min(step_geom, step_field);
+  using namespace vecgeom;
+  using namespace vecCore::math;
+  using vecCore::Set;
+  using vecCore::Get;
 
-      // Propagate in field with step distance (update position and direction)
-      fPropagator->Propagate(*track, step);
+  const double tolerance   = 1.E-9 * geant::units::mm;
+  const double epsilon     = 1.E-4 * geant::units::mm;
+  const double toKiloGauss = 1.0   / geant::units::kilogauss; // Converts to kilogauss
+  const auto   tube = fLayers[layer];
 
-      // Update track state other than position/direction
-      track->DecreasePstep(step);
-      track->DecreaseSnext(step);
-      track->DecreaseSafety(step);
-      track->IncreaseStep(step);
-      track->IncrementNsteps();
+  Vector3D<double> const bfield = fPropagator->GetBfield();
+  ConstFieldHelixStepper *helixStepper = new ConstFieldHelixStepper(bfield);
 
-      inside = (step <= safety) ? true : tube->Contains(track->Position());
+  // Setup first lanes
+  for (auto i = 0; i < kVectorSize; i++) {
+    lane[i] = i;
+    tracks_v.Gather(tracks[i], i);
+  }
+  nextTrack += kVectorSize;
+
+  Double_v safety_v, dmax_v, snext_v, step_geom_v, step_field_v, step_v;
+
+  bool ongoing = true;
+  while (ongoing) {
+    safety_v = tube->SafetyToOutVec(tracks_v.fPos_v);
+    dmax_v   = 8. * epsilon / tracks_v.Curvature_v(bfield.z() * toKiloGauss);
+    snext_v  = tube->DistanceToOutVec(tracks_v.fPos_v, tracks_v.fDir_v, vecgeom::kInfLength);
+    
+    step_geom_v  = Max(static_cast<Double_v>(epsilon), snext_v);
+    step_field_v = Max(dmax_v, safety_v);
+    step_v       = Min(step_geom_v, step_field_v);
+    
+    helixStepper->DoStep<Double_v>(
+        tracks_v.fPos_v, tracks_v.fDir_v, tracks_v.fCharge_v,
+        tracks_v.fMomentum_v, step_v, tracks_v.fPos_v, tracks_v.fDir_v);
+
+    tracks_v.fNSteps_v += 1;
+    
+    // Assign new track to a lane if previous was fully propagated
+    int propagatedCount = 0;
+    bool propagatedTrack[kVectorSize] = {false};
+    if (vecCore::MaskFull(step_v <= safety_v)) continue;
+    for (auto i = 0; i < kVectorSize; i++) {
+      vecgeom::Vector3D<double> pos(Get(tracks_v.fPos_v.x(), i),
+                                    Get(tracks_v.fPos_v.y(), i), 
+                                    Get(tracks_v.fPos_v.z(), i));
+      bool inside = tube->Contains(pos);
+      propagatedTrack[i] = !inside;
+      if (propagatedTrack[i]) propagatedCount++;
     }
+    bool refill = (kTracksSize - nextTrack) > kVectorSize;
+    if (!refill) refill = (kTracksSize - nextTrack) > propagatedCount;
+    if (refill) {
+      // There are enough tracks to refill the done lanes
+      for (auto i = 0; i < kVectorSize; i++) {
+        if (propagatedTrack[i]) {
+          // Scatter back the propagated track
+          tracks_v.Scatter(i, tracks[lane[i]]);
+          
+          // Track is now on boundary
+          tracks[lane[i]]->SetStatus(vectorflow::kBoundary);
 
-    // Track is now on a boundary
-    track->SetStatus(vectorflow::kBoundary);
-  
-    // Exiting setup?
-    if (Abs(track->Position().z()) > tube->z() ||
-        track->Position().Perp() > kStrips2VolRmax) {
-      track->SetStatus(vectorflow::kKilled);
+          // Exiting setup?
+          if (Abs(tracks[lane[i]]->Position().z()) > tube->z() || 
+              tracks[lane[i]]->Position().Perp() > kStrips2VolRmax) {
+            tracks[lane[i]]->SetStatus(vectorflow::kKilled);
+            gNkills++;
+          }
+
+          // Set values for new track in its corresponding lane
+          tracks_v.Gather(tracks[nextTrack], i);
+          lane[i] = nextTrack++;
+        }
+      }
+    } else {
+      // Not enough tracks to refill the vector mode, scatter existing ones
+      for (auto i = 0; i < kVectorSize; i++) {
+        tracks_v.Scatter(i, tracks[lane[i]]);
+        if (!propagatedTrack[i]) {
+          // Track is not fully propagated yet, propagate in scalar mode
+          PropagateInTube(layer, *tracks[lane[i]]);
+          gNkills++;
+        }
+      }
+      ongoing = false;
     }
   }
+
+  // Execute remaining tracks in scalar mode
+  while (nextTrack < kTracksSize) {
+    PropagateInTube(layer, *tracks[nextTrack++]);
+    gNkills++;
+  }
+
+
+  delete helixStepper;
 }
 
 } // namespace trackml

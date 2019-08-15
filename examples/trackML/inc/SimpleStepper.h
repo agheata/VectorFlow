@@ -22,7 +22,7 @@ class HelixPropagator;
 
 class SimpleStepper {
 private:
-  HelixPropagator *fPropagator    = nullptr;
+  HelixPropagator *fPropagator = nullptr;
   std::vector<vecgeom::UnplacedTube *> fLayers;
 
 public:
