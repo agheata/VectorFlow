@@ -7,8 +7,6 @@
 #include "Geant/ConstFieldHelixStepper.h"
 #include "Tracks_v.h"
 
-extern int gNkills;
-
 namespace trackml {
 
 SimpleStepper::SimpleStepper(HelixPropagator *prop) : fPropagator(prop)
@@ -140,7 +138,7 @@ void SimpleStepper::PropagateInTube(int layer, std::vector<vectorflow::Track*> c
   }
 
   // VECTOR TYPES IMPLEMENTATION
-  Tracks_v<Track> tracks_v;
+  Tracks_v<Track> tracks_v;  
 
   std::size_t lane[kVectorSize]; // Array to check which track is in which lane
   std::size_t nextTrack = 0;     // Counter to keep track and dispatch tracks
@@ -211,7 +209,6 @@ void SimpleStepper::PropagateInTube(int layer, std::vector<vectorflow::Track*> c
           if (Abs(tracks[lane[i]]->Position().z()) > tube->z() || 
               tracks[lane[i]]->Position().Perp() > kStrips2VolRmax) {
             tracks[lane[i]]->SetStatus(vectorflow::kKilled);
-            gNkills++;
           }
 
           // Set values for new track in its corresponding lane
@@ -226,7 +223,16 @@ void SimpleStepper::PropagateInTube(int layer, std::vector<vectorflow::Track*> c
         if (!propagatedTrack[i]) {
           // Track is not fully propagated yet, propagate in scalar mode
           PropagateInTube(layer, *tracks[lane[i]]);
-          gNkills++;
+        } else {
+          // Remaining track got propagated, check the boundary
+          // Track is now on boundary
+          tracks[lane[i]]->SetStatus(vectorflow::kBoundary);
+
+          // Exiting setup?
+          if (Abs(tracks[lane[i]]->Position().z()) > tube->z() || 
+              tracks[lane[i]]->Position().Perp() > kStrips2VolRmax) {
+            tracks[lane[i]]->SetStatus(vectorflow::kKilled);
+          }
         }
       }
       ongoing = false;
@@ -234,11 +240,8 @@ void SimpleStepper::PropagateInTube(int layer, std::vector<vectorflow::Track*> c
   }
 
   // Execute remaining tracks in scalar mode
-  while (nextTrack < kTracksSize) {
+  while (nextTrack < kTracksSize) 
     PropagateInTube(layer, *tracks[nextTrack++]);
-    gNkills++;
-  }
-
 
   delete helixStepper;
 }
