@@ -36,15 +36,14 @@ using namespace vectorflow;
   static const char *time_unit_name = "ms";
 #endif
 
-extern int gNkills;
-
 //=============================================================================
 struct TaskLayerPropagator : public Work<Track, std::vector<Track*>> {
   // Propagator task needs a stepper
   int fLayer = -1;
   trackml::HelixPropagator *fPropagator = nullptr;
   trackml::SimpleStepper   *fStepper    = nullptr;
-  bool fVerbose = false;
+  //Tracks_v<Track> fTracks_v;
+  bool fVerbose = true;
 
   // Struct constructor
   TaskLayerPropagator(int layer, vecgeom::Vector3D<double> const &bfield) {
@@ -63,11 +62,12 @@ struct TaskLayerPropagator : public Work<Track, std::vector<Track*>> {
   void Execute(Track* track) {
     // Propagate track to the boundary of the current cylindrical layer
     fStepper->PropagateInTube(fLayer, *track);
+    
     if (track->Status() == vectorflow::kKilled) {
       if (fVerbose) {
-      std::cout << "Track " << track->PrimaryParticleIndex() << " from event "
-                << track->Event() << " made " << track->GetNsteps() << " steps. ";
-      std::cout << "Exit position: " << track->Position() << "\n";
+        std::cout << "Track " << track->PrimaryParticleIndex() << " from event "
+                  << track->Event() << " made " << track->GetNsteps() << " steps. ";
+        std::cout << "Exit position: " << track->Position() << "\n";
       }
       return;
     }
@@ -83,30 +83,28 @@ struct TaskLayerPropagator : public Work<Track, std::vector<Track*>> {
 
   // Vector mode executor
   void Execute(std::vector<Track*> const &tracks) {
-    // Propagate vector fo tracks to the boundary of the current cylindrical layer
+    // Propagate vector of tracks to the boundary of the current cylindrical layer
     fStepper->PropagateInTube(fLayer, tracks);
-
-    // Return when all tracks are propagated
-    if (gNkills >= tracks.size()) {
-      if (fVerbose) {
-        for (auto &track : tracks) {
+ 
+    for (auto &track : tracks) {
+      if (track->Status() == vectorflow::kKilled) {
+        if (fVerbose) {
           std::cout << "Track " << track->PrimaryParticleIndex() << " from event "
                     << track->Event() << " made " << track->GetNsteps() << " steps. ";
           std::cout << "Exit position: " << track->Position() << "\n";
         }
-      }
-      return;
-    }
-    
-    for (auto &track : tracks) {
-      bool move_outer = track->Position().Dot(track->Direction()) > 0;
-      size_t client = 0;
-      if (move_outer && fLayer > 0 && fLayer < 3) client = 1;
+      } else {
+        // Dispatch to next layer. Client 0 corresponds to the inner neighbour
+        // layer, client 1 to the outer one
+        bool move_outer = track->Position().Dot(track->Direction()) > 0;
+        size_t client = 0;
+        if (move_outer && fLayer > 0 && fLayer < 3) client = 1;
 
-      Dispatch(track, client);
+        Dispatch(track, client);
+      }
     }
   }
-
+  
 };
 
 //=============================================================================
@@ -147,7 +145,7 @@ int main(int argc, char* argv[]) {
   // Read number of events to be generated
   int nTracks  = 25;
   int nTries   = 1;
-  int nwarm_up = 5;
+  int nwarm_up = 0;
 
   if (argc > 1) nTracks = atoi(argv[1]);
   if (argc > 2) nTries  = atoi(argv[2]);
@@ -225,12 +223,10 @@ int main(int argc, char* argv[]) {
   sum = 0.;
   // Warm up
   for (auto i = 0; i < nwarm_up; i++) {
-    gNkills = 0;
     RunTest(flow, event, tracks);
   } // End of warm up
   std::cout << "\n--EXECUTING IN VECTOR MODE--\n";
   for (auto i = 0; i < nTries; i++) {
-    gNkills = 0;
     auto t = RunTest(flow, event, tracks);
     sum += (double)t;
   }

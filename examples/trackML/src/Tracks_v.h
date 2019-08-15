@@ -9,8 +9,6 @@ using namespace vectorflow;
 using vecCore::Set;
 using vecCore::Get;
 
-int gNkills = 0;
-
 template <typename Data>
 struct Tracks_v {  
   // Data in vecCore vector types
