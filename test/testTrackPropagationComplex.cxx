@@ -36,13 +36,15 @@ using namespace vectorflow;
   static const char *time_unit_name = "ms";
 #endif
 
+extern int gNkills;
+
 //=============================================================================
 struct TaskLayerPropagator : public Work<Track, std::vector<Track*>> {
   // Propagator task needs a stepper
   int fLayer = -1;
   trackml::HelixPropagator *fPropagator = nullptr;
   trackml::SimpleStepper   *fStepper    = nullptr;
-  bool fVerbose = true;
+  bool fVerbose = false;
 
   // Struct constructor
   TaskLayerPropagator(int layer, vecgeom::Vector3D<double> const &bfield) {
@@ -51,6 +53,7 @@ struct TaskLayerPropagator : public Work<Track, std::vector<Track*>> {
     fStepper    = new trackml::SimpleStepper(fPropagator);
   }
 
+  // Struct destructor
   ~TaskLayerPropagator() {
     delete fPropagator;
     delete fStepper;
@@ -60,13 +63,13 @@ struct TaskLayerPropagator : public Work<Track, std::vector<Track*>> {
   void Execute(Track* track) {
     // Propagate track to the boundary of the current cylindrical layer
     fStepper->PropagateInTube(fLayer, *track);
-    if (fVerbose) {
-      if (track->Status() == vectorflow::kKilled) {
-        std::cout << "Track " << track->PrimaryParticleIndex() << " from event "
-                  << track->Event() << " made " << track->GetNsteps() << " steps. ";
-        std::cout << "Exit position: " << track->Position() << "\n";
-        return;
+    if (track->Status() == vectorflow::kKilled) {
+      if (fVerbose) {
+      std::cout << "Track " << track->PrimaryParticleIndex() << " from event "
+                << track->Event() << " made " << track->GetNsteps() << " steps. ";
+      std::cout << "Exit position: " << track->Position() << "\n";
       }
+      return;
     }
 
     // Dispatch to next layer. Client 0 corresponds to the inner neighbour
@@ -81,21 +84,19 @@ struct TaskLayerPropagator : public Work<Track, std::vector<Track*>> {
   // Vector mode executor
   void Execute(std::vector<Track*> const &tracks) {
     // Propagate vector fo tracks to the boundary of the current cylindrical layer
-    int nKills = 0;
     fStepper->PropagateInTube(fLayer, tracks);
-    if (fVerbose) {
-      for (auto &track : tracks) {
-        if (track->Status() == vectorflow::kKilled) {
+
+    // Return when all tracks are propagated
+    if (gNkills >= tracks.size()) {
+      if (fVerbose) {
+        for (auto &track : tracks) {
           std::cout << "Track " << track->PrimaryParticleIndex() << " from event "
                     << track->Event() << " made " << track->GetNsteps() << " steps. ";
           std::cout << "Exit position: " << track->Position() << "\n";
-          nKills++;
         }
       }
+      return;
     }
-
-    // Return when all tracks are propagated
-    if (nKills == tracks.size()) return;
     
     for (auto &track : tracks) {
       bool move_outer = track->Position().Dot(track->Direction()) > 0;
@@ -105,6 +106,7 @@ struct TaskLayerPropagator : public Work<Track, std::vector<Track*>> {
       Dispatch(track, client);
     }
   }
+
 };
 
 //=============================================================================
@@ -115,6 +117,7 @@ void Propagate(std::vector<Track> &tracks,
     if (track.Charge() != 0)
       flow.AddData(&track);
   }
+
   // Process the complex flow as long as there is still data in the buffers
   while (flow.GetNstates())
     flow.Execute();
@@ -128,7 +131,7 @@ unsigned long long RunTest(ComplexFlow<Track, std::vector<Track *>, 4> &flow,
   for (auto i = 0; i < nPrimaries; i++)
     tracks[i].Reset(*event->GetPrimary(i));
 
-  Timer<time_unit> timer; // for benchmarking purposes
+  Timer<time_unit> timer; // For benchmarking purposes
   timer.Start();
 
   Propagate(tracks, flow);
@@ -142,13 +145,12 @@ unsigned long long RunTest(ComplexFlow<Track, std::vector<Track *>, 4> &flow,
 int main(int argc, char* argv[]) {
   using namespace geant::units;
   // Read number of events to be generated
-  int nTracks = 20;
-  int nTries  = 1;
+  int nTracks  = 25;
+  int nTries   = 1;
+  int nwarm_up = 5;
 
-  if (argc > 1)
-    nTracks = atoi(argv[1]);
-  if (argc > 2)
-    nTries  = atoi(argv[2]);
+  if (argc > 1) nTracks = atoi(argv[1]);
+  if (argc > 2) nTries  = atoi(argv[2]);
 
   // Add CocktailGenerator
   vecgeom::Vector3D<double> vertex(0., 0., 10.);
@@ -185,7 +187,6 @@ int main(int argc, char* argv[]) {
   for (auto i = 0; i < 4; ++i) {
     propagators[i] = new TaskLayerPropagator(i, bfield);
     flow.AddWork(propagators[i], i);
-    flow.SetVectorMode(i, false); // scalar flow
   }
 
   // Connect clients to tasks
@@ -200,29 +201,43 @@ int main(int argc, char* argv[]) {
   // Make a copy of the tracks, so that we can run the test multiple times
   std::vector<Track> tracks(event->GetNprimaries());
 
+  // SCALAR FLOW
+  // =============================================================================
+  for (auto i = 0; i < 4; ++i)
+    flow.SetVectorMode(i, false);
+  double sum = 0.;
+  // Warm up
+  for (auto i = 0; i < nwarm_up; i++) {
+    RunTest(flow, event, tracks);
+  } // End of warm up
   std::cout << "\n--EXECUTING IN SCALAR MODE--\n";
-  double sum   = 0.;
-  int nwarm_up = 20;
-  // for (auto i = 0; i < nwarm_up; i++) RunTest(flow, event, tracks); // warm up
   for (auto i = 0; i < nTries; i++) {
     auto t = RunTest(flow, event, tracks);
     sum += (double)t;
   }
   double average_s = sum / nTries;
-  std::cout << "\nExecution time:   " << average_s << " [" << time_unit_name << "]\n";
+  std::cout << "Execution time: " << average_s << " [" << time_unit_name << "]\n";
 
+  // VECTOR FLOW
+  // =============================================================================
+  for (auto i = 0; i < 4; ++i)
+    flow.SetVectorMode(i, true);
+  sum = 0.;
+  // Warm up
+  for (auto i = 0; i < nwarm_up; i++) {
+    gNkills = 0;
+    RunTest(flow, event, tracks);
+  } // End of warm up
   std::cout << "\n--EXECUTING IN VECTOR MODE--\n";
-  for (auto i = 0; i < 4; ++i) flow.SetVectorMode(i, true);
-  sum = 0;
-  // for (auto i = 0; i < nwarm_up; i++) RunTest(flow, event, tracks); // warm up
   for (auto i = 0; i < nTries; i++) {
+    gNkills = 0;
     auto t = RunTest(flow, event, tracks);
     sum += (double)t;
   }
   double average_v = sum / nTries;
-  std::cout << "\nExecution time:   " << average_v << " [" << time_unit_name << "]\n";
+  std::cout << "Execution time: " << average_v << " [" << time_unit_name << "]\n";
 
-  std::cout << "\nSpeed-up:   " << average_s / average_v << "x\n";
+  std::cout << "\n***** Speed-up: " << average_s / average_v << "x\n";
 
   // Clearing created pointers
   event->Clear();
