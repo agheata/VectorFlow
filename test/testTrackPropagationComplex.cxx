@@ -25,6 +25,10 @@
 #include "SimpleStepper.h"
 #include "timer.h"
 
+#ifdef USE_GPERFTOOLS
+  #include <gperftools/profiler.h>
+#endif
+
 using namespace vectorflow;
 
 // For benchmarking purposes
@@ -42,8 +46,7 @@ struct TaskLayerPropagator : public Work<Track, std::vector<Track*>> {
   int fLayer = -1;
   trackml::HelixPropagator *fPropagator = nullptr;
   trackml::SimpleStepper   *fStepper    = nullptr;
-  //Tracks_v<Track> fTracks_v;
-  bool fVerbose = true;
+  bool fVerbose = false;
 
   // Struct constructor
   TaskLayerPropagator(int layer, vecgeom::Vector3D<double> const &bfield) {
@@ -143,12 +146,19 @@ unsigned long long RunTest(ComplexFlow<Track, std::vector<Track *>, 4> &flow,
 int main(int argc, char* argv[]) {
   using namespace geant::units;
   // Read number of events to be generated
-  int nTracks  = 25;
-  int nTries   = 1;
-  int nwarm_up = 0;
+  int nTracks    = 100;
+  int nTries     = 10;
+  int nwarm_up   = 10;
+  bool singletry = false;
+  bool vecmode   = false;
 
   if (argc > 1) nTracks = atoi(argv[1]);
   if (argc > 2) nTries  = atoi(argv[2]);
+  if (argc > 3) {
+    singletry = true;
+    if (!strcmp(argv[3], "v"))
+      vecmode = true; // For profiling purposes
+  }
 
   // Add CocktailGenerator
   vecgeom::Vector3D<double> vertex(0., 0., 10.);
@@ -198,6 +208,34 @@ int main(int argc, char* argv[]) {
 
   // Make a copy of the tracks, so that we can run the test multiple times
   std::vector<Track> tracks(event->GetNprimaries());
+
+  // SINGLETRY FOR PROFILING
+  // =============================================================================
+  if (singletry) {
+    if (vecmode) std::cout << "--EXECUTING SINGLE TRY IN VECTOR MODE--\n";
+    else         std::cout << "--EXECUTING SINGLE TRY IN SCALAR MODE--\n";
+
+    for (auto i = 0; i < 4; ++i) flow.SetVectorMode(i, vecmode);
+    
+    #ifdef USE_GPERFTOOLS
+      // CPU profiliing using gperftools
+      std::cout << "=== Profiling using gperftools. Output goes to gperfprof.out\n";
+      ProfilerStart("gperfprof.out");
+    #endif
+    
+    auto time = RunTest(flow, event, tracks);
+
+    #ifdef USE_GPERFTOOLS
+      ProfilerStop();
+      std::cout << "=== Profiling stopped\n";
+    #endif
+    
+    std::cout << "Execution time: " << time << " [" << time_unit_name << "]\n";
+    
+    // End of test
+    std::cout << "\n--END OF TEST--\n";
+    return 0;
+  }
 
   // SCALAR FLOW
   // =============================================================================
