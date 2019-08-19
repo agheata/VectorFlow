@@ -49,6 +49,13 @@ struct Tracks_v {
     
     return vecCore::Blend<Double_v>(Abs(qB_v) < kTiny, kTiny, curvature_v);
   }
+  
+  VECGEOM_FORCE_INLINE
+  bool IsNormalized() const {
+    Double_v norm    = fDir_v.Mag2();
+    MaskD_v  is_norm = 1. - vecgeom::kTolerance < norm && norm < 1 + vecgeom::kTolerance;
+    return vecCore::MaskFull(is_norm);
+  }
 };
 
 #endif

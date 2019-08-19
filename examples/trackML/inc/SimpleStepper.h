@@ -29,10 +29,12 @@ public:
   SimpleStepper(HelixPropagator *prop);
   ~SimpleStepper() {}
 
+  // PropagateToR methods, for a track and a vector of tracks
   void PropagateToR(double radius, vectorflow::Track &track) const;
+  void PropagateToR(double radius, std::vector<vectorflow::Track*> const &tracks) const;
 
+  // PropagateInTube methods, for a track and a vector of tracks
   void PropagateInTube(int layer, vectorflow::Track &track) const;
-
   void PropagateInTube(int layer, std::vector<vectorflow::Track*> const &tracks) const;
 };
 

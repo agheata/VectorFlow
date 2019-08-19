@@ -19,7 +19,8 @@ SimpleStepper::SimpleStepper(HelixPropagator *prop) : fPropagator(prop)
   fLayers.push_back(GeoManager::MakeInstance<UnplacedTube>(kStrips1VolRmax, kStrips2VolRmax, kWorldDz, 0., kTwoPi));
 }
 
-void SimpleStepper::PropagateToR(const double radius, vectorflow::Track &track) const
+// Method for a track
+void SimpleStepper::PropagateToR(double radius, vectorflow::Track &track) const
 {
   // Compute safe distance for the track to getting outside the sphere of given radius
   using namespace vecgeom;
@@ -71,6 +72,116 @@ void SimpleStepper::PropagateToR(const double radius, vectorflow::Track &track) 
   }
 }
 
+// Method for a vector of tracks
+void SimpleStepper::PropagateToR(double radius, std::vector<Track *> const &tracks) const
+{
+  const std::size_t kTracksSize = tracks.size();
+  const std::size_t kVectorSize = vecCore::VectorSize<Double_v>();
+
+  // Execute scalar mode if there are less tracks than vector lanes
+  if (kTracksSize < kVectorSize) {
+    for (auto track : tracks)
+      PropagateToR(radius, *track);
+    return;
+  }
+
+  // VECTOR TYPES IMPLEMENTATION
+  Tracks_v<Track> tracks_v;
+
+  std::size_t lane[kVectorSize]; // Array to check which track is which lane
+  std::size_t nextTrack = 0;     // Counter to dispatch tracks
+
+  // Declare constants and auxiliar variables
+  const double epsilon     = 1.E-4 * geant::units::mm;
+  const double toKiloGauss = 1.0   / geant::units::kilogauss;
+
+  vecgeom::Vector3D<double> const bfield = fPropagator->GetBfield();
+  ConstFieldHelixStepper *helixStepper = new ConstFieldHelixStepper(bfield);
+
+  const double radius2 = radius * radius;
+  Double_v rad2_v, c_v, safety_v, dmax_v, pDotV_v, d2_v, snext_v, step_geom_v, step_field_v, step_v;
+
+  // Set up first lanes
+  for (auto i = 0; i < kVectorSize; i++) {
+    lane[i] = i;
+    tracks_v.Gather(tracks[i], i);
+  }
+  nextTrack += kVectorSize;
+  
+  rad2_v = tracks_v.fPos_v.Mag2();
+  c_v    = rad2_v - radius2;
+  
+  bool ongoing = vecCore::MaskFull(c_v < 0);
+
+  // Execute until all lanes can at least do one more step
+  while (ongoing) {
+    safety_v = radius - vecCore::math::Sqrt(rad2_v);
+    dmax_v   = 8. * epsilon / tracks_v.Curvature_v(bfield.z() * toKiloGauss);
+    pDotV_v  = tracks_v.fPos_v.Dot(tracks_v.fDir_v);
+    d2_v     = pDotV_v * pDotV_v - c_v;
+    snext_v  = -pDotV_v + vecCore::math::Sqrt(vecCore::math::Abs(d2_v));
+
+    step_geom_v  = vecCore::math::Max(static_cast<Double_v>(epsilon), snext_v);
+    step_field_v = vecCore::math::Max(dmax_v, safety_v);
+    step_v       = vecCore::math::Min(step_geom_v, step_field_v);
+
+    helixStepper->DoStep<Double_v>(
+        tracks_v.fPos_v, tracks_v.fDir_v, tracks_v.fCharge_v,
+        tracks_v.fMomentum_v, step_v, tracks_v.fPos_v, tracks_v.fDir_v);
+
+    assert(tracks_v.IsNormalized() &&
+           "ERROR: Direction not normalized after field propagation");
+
+    // Calculate c_v values again for the propagated tracks
+    rad2_v = tracks_v.fPos_v.Mag2();
+    c_v    = rad2_v - radius2;
+
+    tracks_v.fNSteps_v += 1;
+
+    // Assign new track to a lane if previous was fully propagated
+    if (!vecCore::MaskFull(c_v < 0)) {
+      // There are finished lanes, check if we have enough tracks to refill
+      bool refill = (kTracksSize - nextTrack) > kVectorSize;
+      if (!refill)
+        refill = (kTracksSize - nextTrack) > MaskCount(c_v >= 0);
+      if (refill) {
+        // We have enough tracks to refill the done lanes
+        for (auto i = 0; i < kVectorSize; i++) {
+          if (Get(c_v, i) >= 0) {
+            // Scatter back the propagated track
+            tracks_v.Scatter(i, tracks[lane[i]]);
+
+            // Set values for new track in its corresponding lane
+            tracks_v.Gather(tracks[nextTrack], i);
+            lane[i] = nextTrack++;
+          }
+        }
+        // Update rad2_v and c_v (even if possibly just one lane changed)
+        rad2_v = tracks_v.fPos_v.Mag2();
+        c_v    = rad2_v - radius2;
+      } else {
+        // Not enough tracks to refill the vector mode, scatter existing ones
+        for (auto i = 0; i < kVectorSize; i++) {
+          // Scatter back the propagated track
+          tracks_v.Scatter(i, tracks[lane[i]]);
+          if (Get(c_v, i) < 0) {
+            // Track not fully propagated yet, propagate in scalar mode
+            PropagateToR(radius, *tracks[lane[i]]);
+          }
+        }
+        ongoing = false;
+      }
+    }
+  }
+
+  // Execute remaining tracks in scalar mode
+  while (nextTrack < kTracksSize)
+    PropagateToR(radius, *tracks[nextTrack++]);
+
+  delete helixStepper;
+}
+
+// Method for a track
 void SimpleStepper::PropagateInTube(int layer, vectorflow::Track &track) const
 {
   // Propagate along a helix inside a tube 
@@ -125,6 +236,7 @@ void SimpleStepper::PropagateInTube(int layer, vectorflow::Track &track) const
   }
 }
 
+// Method for a vector of tracks
 void SimpleStepper::PropagateInTube(int layer, std::vector<vectorflow::Track*> const &tracks) const
 {
   const std::size_t kTracksSize = tracks.size();
