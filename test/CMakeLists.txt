@@ -13,7 +13,7 @@ include_directories(
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/tests)
 
 add_executable(testInterfaces testInterfaces.cxx)
-target_link_libraries(testInterfaces TrackML ${VECGEOM_LIBRARIES})
+target_link_libraries(testInterfaces ${VECGEOM_LIBRARIES})
 message(STATUS "Created target for testInterfaces")
 
 add_executable(testTrackPropagationPipeline testTrackPropagationPipeline.cxx)

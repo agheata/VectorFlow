@@ -19,16 +19,20 @@ include_directories(
 #
 add_library(Vmagfield SHARED ${sources} )
 target_link_libraries(Vmagfield   ${VECGEOM_LIBRARIES} ${VecCore_LIBRARIES})
+
 #----------------------------------------------------------------------------------------------
 # Install the files
 #
 install(TARGETS Vmagfield LIBRARY DESTINATION lib)
 install(FILES ${headers} DESTINATION inc/Geant)
-add_subdirectory(tests)
+
+if (BUILD_TESTING)
+  add_subdirectory(tests)
+endif()
 
 #----------------------------------------------------------------------------------------------
 # Add this directory to Doxygen
 #
-if(DOXYGEN_FOUND)
+if (DOXYGEN_FOUND)
   set(DOXYFILE_SOURCE_DIRS "${DOXYFILE_SOURCE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}" PARENT_SCOPE)
 endif()
