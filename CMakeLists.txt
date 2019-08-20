@@ -9,12 +9,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
 
 option(GPERFTOOLS "Enable profiling using Google performance tools" OFF)
-option(BUILD_TESTING  "Build test binaries and create test target"  ON)
-option(BUILD_EXAMPLES "Build binaries for performance benchmarking" ON)
+option(BUILD_TESTING  "Build test binaries and create test target"  OFF)
+option(BUILD_EXAMPLES "Build binaries for performance benchmarking" OFF)
 option(ROOT "Include ROOT" OFF)
 set(VecCore_VERSION 0.5.0)
 
-if(BUILD_TESTING)
+# Set backend for tests and benchmarks
+if (BUILD_TESTING OR BUILD_EXAMPLES)
   message("Vc backend selected for testing")
   set(VecCore_BACKEND Vc)
 endif()
@@ -129,13 +130,24 @@ endif("${isSystemDir}" STREQUAL "-1")
 add_subdirectory(base)
 add_subdirectory(interface)
 
+#----------------------------------------------------------------------------------------------
+# Build tests
+#
 if (BUILD_TESTING)
-  add_subdirectory(test)
   add_subdirectory(magneticfield)
-endif()
-
-
-if (BUILD_EXAMPLES)
   add_subdirectory(event)
   add_subdirectory(examples)
+endif()
+
+#----------------------------------------------------------------------------------------------
+# Build benchmarks
+#
+if (BUILD_EXAMPLES)
+  add_subdirectory(test)
+  # Benchmark examples dependencies
+  if (NOT BUILD_TESTING)
+    add_subdirectory(magneticfield)
+    add_subdirectory(event)
+    add_subdirectory(examples)
+  endif()
 endif()

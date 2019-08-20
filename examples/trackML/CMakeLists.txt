@@ -24,9 +24,11 @@ target_link_libraries(TrackML VFevent Vmagfield  ${VECGEOM_LIBRARIES})
 #
 install(TARGETS TrackML LIBRARY DESTINATION lib)
 install(FILES ${headers} DESTINATION examples/TrackML/inc)
-install(FILES ${data} DESTINATION bin/tests/data)
 
-add_subdirectory(test)
+if (BUILD_TESTING)
+  install(FILES ${data} DESTINATION bin/tests/data)
+  add_subdirectory(test)
+endif()
 
 #----------------------------------------------------------------------------------------------
 # Add this directory to Doxygen

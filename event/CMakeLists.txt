@@ -21,7 +21,9 @@ target_link_libraries(VFevent  ${VECGEOM_LIBRARIES} ${VecCore_LIBRARIES})
 install(TARGETS VFevent LIBRARY DESTINATION lib)
 install(FILES ${headers} DESTINATION inc)
 
-add_subdirectory(test)
+if (BUILD_TESTING)
+  add_subdirectory(test)
+endif()
 
 #----------------------------------------------------------------------------------------------
 # Add this directory to Doxygen
