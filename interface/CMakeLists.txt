@@ -3,7 +3,7 @@
 #
 include_directories("${PROJECT_SOURCE_DIR}/interface/inc")
 
-file(GLOB headers inc/vectorFlow/*.h)
+file(GLOB headers inc/vectorFlow/*)
 
 install(FILES ${headers} DESTINATION inc/vectorFlow)
 

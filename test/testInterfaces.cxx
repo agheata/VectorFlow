@@ -1,7 +1,5 @@
 #include <iostream>
-#include <vectorFlow/ComplexFlow.h>
-#include <vectorFlow/PipelineFlow.h>
-#include <vectorFlow/RngWrapper.h>
+#include <vectorFlow/vectorFlow>
 
 using namespace vectorflow;
 
