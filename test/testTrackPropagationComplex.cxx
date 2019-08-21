@@ -14,12 +14,11 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <vectorFlow/ComplexFlow.h>
+#include <vectorFlow/vectorFlow>
 #include "CocktailGenerator.h"
 #include "Event.h"
 #include "Track.h"
 #include "Particle.h"
-#include "vectorFlow/SystemOfUnits.h"
 #include "base/Vector3D.h"
 #include "HelixPropagator.h"
 #include "SimpleStepper.h"

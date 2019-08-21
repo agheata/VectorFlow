@@ -1,0 +1,17 @@
+#ifndef VECTORFLOW_INCLUDED
+#define VECTORFLOW_INCLUDED
+
+#include "vectorFlow/PhysicalConstants.h"
+#include "vectorFlow/PrimaryGenerator.h"
+#include "vectorFlow/RngWrapper.h"
+#include "vectorFlow/SystemOfUnits.h"
+#include "vectorFlow/Typedefs.h"
+#include "vectorFlow/VectorTypes.h"
+#include "vectorFlow/math_wrappers.h"
+
+#include "Work.h"
+#include "Flow.h"
+#include "PipelineFlow.h"
+#include "ComplexFlow.h"
+
+#endif
