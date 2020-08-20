@@ -1,7 +1,7 @@
 #include "SimpleStepper.h"
 
-#include <management/GeoManager.h>
-#include <volumes/Tube.h>
+#include <VecGeom/management/GeoManager.h>
+#include <VecGeom/volumes/Tube.h>
 #include "Track.h"
 #include "HelixPropagator.h"
 #include "vectorFlow/SystemOfUnits.h"

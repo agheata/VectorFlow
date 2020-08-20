@@ -9,7 +9,7 @@
 #define SCALAR_MAG_FIELD_EQUATION_H 1
 
 // #include <vector>
-#include "base/Vector3D.h"
+#include "VecGeom/base/Vector3D.h"
 
 #include "vectorFlow/SystemOfUnits.h"
 #include "vectorFlow/PhysicalConstants.h"

@@ -13,10 +13,10 @@ class Particle;
 
 typedef geantphysics::Particle Particle_t;
 
-#include "navigation/NavigationState.h"
+#include "VecGeom/navigation/NavigationState.h"
 typedef VECGEOM_NAMESPACE::NavigationState VolumePath_t;
-#include "volumes/LogicalVolume.h"
+#include "VecGeom/volumes/LogicalVolume.h"
 typedef VECGEOM_NAMESPACE::LogicalVolume Volume_t;
-#include "volumes/PlacedVolume.h"
+#include "VecGeom/volumes/PlacedVolume.h"
 typedef VECGEOM_NAMESPACE::VPlacedVolume Node_t;
 #endif

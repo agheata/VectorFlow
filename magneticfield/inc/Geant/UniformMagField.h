@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-#include <base/Vector3D.h>
+#include <VecGeom/base/Vector3D.h>
 #include <vectorFlow/VectorTypes.h>
 
 #include "Geant/VVectorField.h"

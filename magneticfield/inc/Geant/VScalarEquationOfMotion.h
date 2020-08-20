@@ -17,7 +17,7 @@
 #include <iostream>
 
 // #include <vector>
-#include "base/Vector3D.h"
+#include "VecGeom/base/Vector3D.h"
 
 // #include "GUVTypes.hh"      // "globals.hh"
 #include "Geant/Config.h"

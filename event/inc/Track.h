@@ -13,7 +13,7 @@
 #ifndef VECTORFLOW_TRACK
 #define VECTORFLOW_TRACK
 
-#include "base/Vector3D.h"
+#include "VecGeom/base/Vector3D.h"
 #include "vectorFlow/math_wrappers.h"
 
 #include <functional>

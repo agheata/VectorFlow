@@ -16,7 +16,7 @@
 #include "Particle.h"
 #include "SimpleStepper.h"
 #include "Track.h"
-#include "base/Vector3D.h"
+#include <VecGeom/base/Vector3D.h>
 #include "timer.h"
 #include "vectorFlow/SystemOfUnits.h"
 #include "vectorFlow/VectorTypes.h"

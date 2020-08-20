@@ -1,7 +1,7 @@
 #ifndef TRACKML_HELIX_PROPAGATOR_H
 #define TRACKML_HELIX_PROPAGATOR_H
 
-#include <base/Vector3D.h>
+#include <VecGeom/base/Vector3D.h>
 
 class ConstFieldHelixStepper;
 

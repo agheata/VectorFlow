@@ -10,8 +10,8 @@
 #ifndef CONSTVECFIELDHELIXSTEPPER_H_
 #define CONSTVECFIELDHELIXSTEPPER_H_
 
-#include <base/Vector3D.h>
-#include <base/SOA3D.h>
+#include <VecGeom/base/Vector3D.h>
+#include <VecGeom/base/SOA3D.h>
 #include <Geant/Config.h>
 #include <vectorFlow/VectorTypes.h>
 

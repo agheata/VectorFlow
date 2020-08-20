@@ -1,8 +1,8 @@
 #ifndef GEANT_VECTOR_TYPES_H
 #define GEANT_VECTOR_TYPES_H
 
-#include <base/Global.h>
-#include <base/Vector3D.h>
+#include <VecGeom/base/Global.h>
+#include <VecGeom/base/Vector3D.h>
 #include <VecCore/VecCore>
 
 namespace vectorflow {

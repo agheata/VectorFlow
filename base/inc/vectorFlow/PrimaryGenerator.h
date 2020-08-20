@@ -13,7 +13,7 @@
 #ifndef VECTORFLOW_PrimaryGenerator_h
 #define VECTORFLOW_PrimaryGenerator_h
 
-#include <base/Vector3D.h>
+#include <VecGeom/base/Vector3D.h>
 
 template <typename DerivedT> struct Generator_traits;
 

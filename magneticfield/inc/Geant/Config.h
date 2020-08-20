@@ -8,7 +8,7 @@
 #endif
 
 // Include global definitions from VecCore
-#include "base/Global.h"
+#include "VecGeom/base/Global.h"
 
 // Inlining
 #ifdef __INTEL_COMPILER

@@ -5,7 +5,7 @@
 #ifndef GUFIELDPROPAGATOR_H
 #define GUFIELDPROPAGATOR_H 1
 
-#include "base/Vector3D.h"
+#include "VecGeom/base/Vector3D.h"
 // typedef vecgeom::Vector3D<double>  ThreeVector;
 // #include "Geant/ScalarIntegrationDriver.h"
 

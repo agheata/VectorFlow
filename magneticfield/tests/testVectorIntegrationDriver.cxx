@@ -16,7 +16,7 @@ using geant::units::eplus;
 using geant::units::tesla;
 using geant::units::degree;
 
-#include <base/Vector3D.h>
+#include <VecGeom/base/Vector3D.h>
 #include <vectorFlow/VectorTypes.h>
 
 #include "Geant/UniformMagField.h"

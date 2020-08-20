@@ -13,7 +13,7 @@
 #ifndef GUVectorLineSection_hh
 #define GUVectorLineSection_hh
 
-#include <base/Vector3D.h>
+#include <VecGeom/base/Vector3D.h>
 #include <vectorFlow/VectorTypes.h>
 
 class GUVectorLineSection {

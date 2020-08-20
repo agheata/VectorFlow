@@ -7,7 +7,7 @@
 #include "Geant/VScalarIntegrationStepper.h"
 
 // #include "ThreeVector.h"
-#include <base/Vector3D.h>
+#include <VecGeom/base/Vector3D.h>
 // typedef vecgeom::Vector3D<double>  ThreeVector;
 
 #include "Geant/GULineSection.h"

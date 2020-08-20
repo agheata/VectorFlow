@@ -16,7 +16,7 @@
 #ifndef ScalarFieldTrack_HH
 #define ScalarFieldTrack_HH
 
-#include "base/Vector3D.h" // VecGeom/base/Vector3D.h
+#include "VecGeom/base/Vector3D.h"
 typedef vecgeom::Vector3D<double> ThreeVector;
 
 // #include "G4ChargeState.hh"

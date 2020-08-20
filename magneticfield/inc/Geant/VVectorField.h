@@ -34,8 +34,8 @@
 #define VVectorField_HH
 
 #include <vector>
-#include "base/Vector3D.h"
-#include "base/Global.h"
+#include "VecGeom/base/Vector3D.h"
+#include "VecGeom/base/Global.h"
 #include <vectorFlow/VectorTypes.h>
 
 // #include "GUVTypes.hh"

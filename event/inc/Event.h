@@ -15,7 +15,7 @@
 
 #include <atomic>
 #include <vector>
-#include "base/Vector3D.h"
+#include "VecGeom/base/Vector3D.h"
 
 namespace vectorflow {
 

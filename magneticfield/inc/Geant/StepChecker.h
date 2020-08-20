@@ -5,7 +5,7 @@
 #ifndef STEPCHECKER_H
 #define STEPCHECKER_H
 
-#include "base/Vector3D.h"
+#include "VecGeom/base/Vector3D.h"
 
 #include "Geant/Config.h"
 

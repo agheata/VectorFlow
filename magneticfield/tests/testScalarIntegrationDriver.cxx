@@ -22,7 +22,7 @@ using geant::units::tesla;
 using geant::units::degree;
 
 // #include "ThreeVector.h"
-#include "base/Vector3D.h"
+#include "VecGeom/base/Vector3D.h"
 typedef vecgeom::Vector3D<double> ThreeVector;
 
 #include "Geant/ScalarUniformMagField.h"

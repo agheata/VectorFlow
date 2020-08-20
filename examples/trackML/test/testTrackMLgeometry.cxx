@@ -1,5 +1,5 @@
 #include "TrackMLGeom.h"
-#include "base/Vector3D.h"
+#include <VecGeom/base/Vector3D.h>
 #include "vectorFlow/PhysicalConstants.h"
 #include "vectorFlow/SystemOfUnits.h"
 #include <iostream>

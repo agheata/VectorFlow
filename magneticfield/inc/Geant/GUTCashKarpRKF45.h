@@ -14,7 +14,7 @@
 
 #include "Geant/GULineSection.h"
 #include "Geant/VScalarIntegrationStepper.h"
-#include "base/Vector3D.h"
+#include "VecGeom/base/Vector3D.h"
 
 #define INLINERHS 1
 

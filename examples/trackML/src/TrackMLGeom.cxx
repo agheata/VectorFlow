@@ -5,19 +5,19 @@
 #include <sstream>
 #include <string>
 
-#include <base/Global.h>
-#include <base/Vector3D.h>
-#include <management/GeoManager.h>
-#include <management/RootGeoManager.h>
-#include <volumes/Box.h>
-#include <volumes/LogicalVolume.h>
-#include <volumes/Trd.h>
-#include <volumes/Tube.h>
-#include "navigation/VNavigator.h"
-#include "navigation/NewSimpleNavigator.h"
-#include "navigation/SimpleABBoxNavigator.h"
-#include "navigation/SimpleABBoxLevelLocator.h"
-#include "navigation/HybridNavigator2.h"
+#include <VecGeom/base/Global.h>
+#include <VecGeom/base/Vector3D.h>
+#include <VecGeom/management/GeoManager.h>
+#include <VecGeom/management/RootGeoManager.h>
+#include <VecGeom/volumes/Box.h>
+#include <VecGeom/volumes/LogicalVolume.h>
+#include <VecGeom/volumes/Trd.h>
+#include <VecGeom/volumes/Tube.h>
+#include <VecGeom/navigation/VNavigator.h>
+#include <VecGeom/navigation/NewSimpleNavigator.h>
+#include <VecGeom/navigation/SimpleABBoxNavigator.h>
+#include <VecGeom/navigation/SimpleABBoxLevelLocator.h>
+#include <VecGeom/navigation/HybridNavigator2.h>
 
 namespace trackml {
 

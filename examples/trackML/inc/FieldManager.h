@@ -3,7 +3,7 @@
 
 #include <vectorFlow/SystemOfUnits.h>
 #include <vectorFlow/Typedefs.h>
-#include <base/Vector3D.h>
+#include <VecGeom/base/Vector3D.h>
 
 #include <Geant/MagFieldEquation.h>
 #include <Geant/GUFieldPropagator.h>

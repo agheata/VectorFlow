@@ -7,7 +7,7 @@
 #ifndef MagFieldEquation_H
 #define MagFieldEquation_H 1
 
-#include "base/Vector3D.h"
+#include "VecGeom/base/Vector3D.h"
 #include <Geant/Config.h>
 #include <vectorFlow/VectorTypes.h>
 

@@ -8,7 +8,7 @@
 #include "Geant/VVectorField.h"
 #include <iostream>
 
-#include "base/Vector3D.h"
+#include "VecGeom/base/Vector3D.h"
 
 #include "vectorFlow/SystemOfUnits.h"
 #include "vectorFlow/math_wrappers.h"

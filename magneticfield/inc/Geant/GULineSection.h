@@ -15,7 +15,7 @@
 
 // #include "G4Types.hh"
 // #include "ThreeVector.h"
-#include <base/Vector3D.h>
+#include <VecGeom/base/Vector3D.h>
 
 class GULineSection {
   using ThreeVector = vecgeom::Vector3D<double>;

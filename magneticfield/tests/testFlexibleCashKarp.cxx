@@ -6,7 +6,7 @@
 //
 #include <iomanip>
 
-#include "base/Vector3D.h"
+#include "VecGeom/base/Vector3D.h"
 #include <vectorFlow/VectorTypes.h>
 
 using namespace vecCore::math;
